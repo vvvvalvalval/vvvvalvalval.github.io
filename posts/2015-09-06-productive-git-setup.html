@@ -59,8 +59,8 @@
     <h2>Productive Git setup</h2>
 </div>
 <div>
-    <ol class="contents"><li><a href="#installing_autocompletion">Installing autocompletion</a></li><li><a href="#defining_aliases">Defining aliases</a></li><ol><li><a href="#for_common_commands">For common commands</a></li><li><a href="#to_print_the_commits_graph">To print the commits graph</a></li><li><a href="#using_a_git_gui_client">Using a git GUI client</a></li></ol>
-    <p>When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the <a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'>official documentation</a>.  </p><h2><a name="installing&#95;autocompletion"></a>Installing autocompletion</h2> <p>When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  </p><p><!--more-->  </p><p>To achieve this, download <a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'>this file</a>, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  </p><pre><code>source &#126;/.git-completion.bash
+    <ol class="contents"><li><a href="#installing_autocompletion">Installing autocompletion</a></li><li><a href="#defining_aliases">Defining aliases</a></li><ol><li><a href="#for_common_commands">For common commands</a></li><li><a href="#to_print_the_commits_graph">To print the commits graph</a></li></ol><li><a href="#using_a_git_gui_client">Using a git GUI client</a></li></ol>
+    <p>When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the <a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'>official documentation</a>.</p><h2><a name="installing&#95;autocompletion"></a>Installing autocompletion</h2> <p>When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  </p><p><!--more-->  </p><p>To achieve this, download <a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'>this file</a>, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  </p><pre><code>source &#126;/.git-completion.bash
 </code></pre> <h2><a name="defining&#95;aliases"></a>Defining aliases</h2> <h3><a name="for&#95;common&#95;commands"></a>For common commands</h3> <p>Commands like <code>commit</code>, <code>branch</code>, `checkout are so common that it's useful to type them with fewer characters.  To do so, you create git <i>aliases</i> by typing the following commands in a terminal :  </p><pre><code>git config --global alias.co checkout   
 git config --global alias.br branch   
 git config --global alias.ci commit   
@@ -81,7 +81,7 @@ git config --global alias.st status
        clean = git media clean %f  
        smudge = git media smudge %f  
        required = true  
-</code></pre> <h3><a name="using&#95;a&#95;git&#95;gui&#95;client"></a>Using a git GUI client</h3> <p>Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use <a href='https://www.sourcetreeapp.com/'>SourceTree</a>.</p>
+</code></pre> <h2><a name="using&#95;a&#95;git&#95;gui&#95;client"></a>Using a git GUI client</h2> <p>Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use <a href='https://www.sourcetreeapp.com/'>SourceTree</a>.</p>
 </div>
 
 <div id="post-tags">
@@ -113,8 +113,6 @@ git config --global alias.st status
             <div id="sidebar">
                 <h3>Links</h3>
                 <ul id="links">
-                    <li><a href="http://cryogenweb.org/docs/home.html">Cryogen Docs</a></li>
-                    <li><a href="http://carmenla.me/blog/index.html">Carmen's Blog</a></li>
                     
                     <li><a href="/pages/another-page.html">Another Page</a></li>
                     

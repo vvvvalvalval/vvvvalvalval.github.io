@@ -12,7 +12,7 @@ http://blogawesome.com/
 This blog is awesome
 </description>
 <lastBuildDate>
-Sun, 06 Sep 2015 15:59:28 +0200
+Sun, 06 Sep 2015 16:13:59 +0200
 </lastBuildDate>
 <generator>
 clj-rss
@@ -28,7 +28,7 @@ http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
 Productive Git setup
 </title>
 <description>
-&lt;p&gt;When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the &lt;a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'&gt;official documentation&lt;/a&gt;.  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;installing&amp;#95;autocompletion&quot;&gt;&lt;/a&gt;Installing autocompletion&lt;/h2&gt; &lt;p&gt;When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  &lt;/p&gt;&lt;p&gt;&lt;!--more--&gt;  &lt;/p&gt;&lt;p&gt;To achieve this, download &lt;a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'&gt;this file&lt;/a&gt;, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  &lt;/p&gt;&lt;pre&gt;&lt;code&gt;source &amp;#126;/.git-completion.bash
+&lt;p&gt;When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the &lt;a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'&gt;official documentation&lt;/a&gt;.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;installing&amp;#95;autocompletion&quot;&gt;&lt;/a&gt;Installing autocompletion&lt;/h2&gt; &lt;p&gt;When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  &lt;/p&gt;&lt;p&gt;&lt;!--more--&gt;  &lt;/p&gt;&lt;p&gt;To achieve this, download &lt;a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'&gt;this file&lt;/a&gt;, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  &lt;/p&gt;&lt;pre&gt;&lt;code&gt;source &amp;#126;/.git-completion.bash
 &lt;/code&gt;&lt;/pre&gt; &lt;h2&gt;&lt;a name=&quot;defining&amp;#95;aliases&quot;&gt;&lt;/a&gt;Defining aliases&lt;/h2&gt; &lt;h3&gt;&lt;a name=&quot;for&amp;#95;common&amp;#95;commands&quot;&gt;&lt;/a&gt;For common commands&lt;/h3&gt; &lt;p&gt;Commands like &lt;code&gt;commit&lt;/code&gt;, &lt;code&gt;branch&lt;/code&gt;, `checkout are so common that it's useful to type them with fewer characters.  To do so, you create git &lt;i&gt;aliases&lt;/i&gt; by typing the following commands in a terminal :  &lt;/p&gt;&lt;pre&gt;&lt;code&gt;git config --global alias.co checkout   
 git config --global alias.br branch   
 git config --global alias.ci commit   
@@ -49,7 +49,7 @@ git config --global alias.st status
        clean = git media clean %f  
        smudge = git media smudge %f  
        required = true  
-&lt;/code&gt;&lt;/pre&gt; &lt;h3&gt;&lt;a name=&quot;using&amp;#95;a&amp;#95;git&amp;#95;gui&amp;#95;client&quot;&gt;&lt;/a&gt;Using a git GUI client&lt;/h3&gt; &lt;p&gt;Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use &lt;a href='https://www.sourcetreeapp.com/'&gt;SourceTree&lt;/a&gt;.&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt; &lt;h2&gt;&lt;a name=&quot;using&amp;#95;a&amp;#95;git&amp;#95;gui&amp;#95;client&quot;&gt;&lt;/a&gt;Using a git GUI client&lt;/h2&gt; &lt;p&gt;Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use &lt;a href='https://www.sourcetreeapp.com/'&gt;SourceTree&lt;/a&gt;.&lt;/p&gt;
 </description>
 <pubDate>
 Sun, 06 Sep 2015 00:00:00 +0200
