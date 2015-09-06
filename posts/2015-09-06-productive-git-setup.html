@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Productive Git setup</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='http://fonts.googleapis.com/css?family=Alegreya:400italic,700italic,400,700' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="../css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">September 6, 2015</div>
+        
+    </div>
+    <h2>Productive Git setup</h2>
+</div>
+<div>
+    <ol class="contents"><li><a href="#installing_autocompletion">Installing autocompletion</a></li><li><a href="#defining_aliases">Defining aliases</a></li><ol><li><a href="#for_common_commands">For common commands</a></li><li><a href="#to_print_the_commits_graph">To print the commits graph</a></li><li><a href="#using_a_git_gui_client">Using a git GUI client</a></li></ol>
+    <p>When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the <a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'>official documentation</a>.  </p><h2><a name="installing&#95;autocompletion"></a>Installing autocompletion</h2> <p>When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  </p><p><!--more-->  </p><p>To achieve this, download <a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'>this file</a>, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  </p><pre><code>source &#126;/.git-completion.bash
+</code></pre> <h2><a name="defining&#95;aliases"></a>Defining aliases</h2> <h3><a name="for&#95;common&#95;commands"></a>For common commands</h3> <p>Commands like <code>commit</code>, <code>branch</code>, `checkout are so common that it's useful to type them with fewer characters.  To do so, you create git <i>aliases</i> by typing the following commands in a terminal :  </p><pre><code>git config --global alias.co checkout   
+git config --global alias.br branch   
+git config --global alias.ci commit   
+git config --global alias.st status
+</code></pre> <p>Once you have done this, you can type co, br, ci, st every time you would normaly type checkout, branch, commit, status.  </p><h3><a name="to&#95;print&#95;the&#95;commits&#95;graph"></a>To print the commits graph</h3> <p>The following alias will enable you print a pretty representation of the commits graph in your terminal window :</p><pre><code>git config --global alias.lg &quot;log --graph --all --pretty=format:'%C&#40;bold&#41;%h%Creset -%C&#40;auto&#41;%d%Creset %s %C&#40;green dim&#41;&#40;%cr&#41;%Creset %C&#40;ul&#41;&lt;%an&gt;&quot;  
+</code></pre> <p>Now, typing <code>git lg</code> in your repository will print something like this :   </p><p><img src="/img/git-lg-screenshot.png" width="100%">  </p><p>The effect of setting aliases is to modify your ~/.gitconfig file, which should now look like this :</p><pre><code>   &#91;user&#93;  
+       name = Valentin Waeselynck  
+       email = val@bandsquare.fr  
+  &#91;alias&#93;  
+       lg = log --graph --all --pretty=format:'%C&#40;bold&#41;%h%Creset -%C&#40;auto&#41;%d%Creset %s %C&#40;green dim&#41;&#40;%cr&#41;%Creset %C&#40;ul&#41;&lt;%an&gt;'  
+       co = checkout  
+       br = branch  
+       ci = commit  
+       st = status  
+  &#91;core&#93;  
+       editor = vim   
+  &#91;filter &quot;media&quot;&#93;  
+       clean = git media clean %f  
+       smudge = git media smudge %f  
+       required = true  
+</code></pre> <h3><a name="using&#95;a&#95;git&#95;gui&#95;client"></a>Using a git GUI client</h3> <p>Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use <a href='https://www.sourcetreeapp.com/'>SourceTree</a>.</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/tags/tools.html">tools</a>
+    
+    <a href="/tags/tutorial.html">tutorial</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Having a good terminal console on OS X in 2015 &raquo;</a>
+        
+    </div>
+
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <h3>Links</h3>
+                <ul id="links">
+                    <li><a href="http://cryogenweb.org/docs/home.html">Cryogen Docs</a></li>
+                    <li><a href="http://carmenla.me/blog/index.html">Carmen's Blog</a></li>
+                    
+                    <li><a href="/pages/another-page.html">Another Page</a></li>
+                    
+                </ul>
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2015-09-06-productive-git-setup.html">Productive Git setup</a></li>
+                        
+                        <li><a href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Having a good terminal console on OS X in 2015</a></li>
+                        
+                        <li><a href="/posts/2014-12-11-docs.html">Using Cryogen</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/tags/tools.html">tools</a></li>
+                        
+                        <li><a href="/tags/tutorial.html">tutorial</a></li>
+                        
+                        <li><a href="/tags/cryogen.html">cryogen</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="../js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<rss version='2.0' xmlns:atom='http://www.w3.org/2005/Atom'>
+<channel>
+<atom:link href='http://blogawesome.com/' rel='self' type='application/rss+xml'/>
+<title>
+Val on Programming
+</title>
+<link>
+http://blogawesome.com/
+</link>
+<description>
+This blog is awesome
+</description>
+<lastBuildDate>
+Sun, 06 Sep 2015 15:59:28 +0200
+</lastBuildDate>
+<generator>
+clj-rss
+</generator>
+<item>
+<guid>
+http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
+</guid>
+<link>
+http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
+</link>
+<title>
+Productive Git setup
+</title>
+<description>
+&lt;p&gt;When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the &lt;a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'&gt;official documentation&lt;/a&gt;.  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;installing&amp;#95;autocompletion&quot;&gt;&lt;/a&gt;Installing autocompletion&lt;/h2&gt; &lt;p&gt;When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  &lt;/p&gt;&lt;p&gt;&lt;!--more--&gt;  &lt;/p&gt;&lt;p&gt;To achieve this, download &lt;a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'&gt;this file&lt;/a&gt;, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  &lt;/p&gt;&lt;pre&gt;&lt;code&gt;source &amp;#126;/.git-completion.bash
+&lt;/code&gt;&lt;/pre&gt; &lt;h2&gt;&lt;a name=&quot;defining&amp;#95;aliases&quot;&gt;&lt;/a&gt;Defining aliases&lt;/h2&gt; &lt;h3&gt;&lt;a name=&quot;for&amp;#95;common&amp;#95;commands&quot;&gt;&lt;/a&gt;For common commands&lt;/h3&gt; &lt;p&gt;Commands like &lt;code&gt;commit&lt;/code&gt;, &lt;code&gt;branch&lt;/code&gt;, `checkout are so common that it's useful to type them with fewer characters.  To do so, you create git &lt;i&gt;aliases&lt;/i&gt; by typing the following commands in a terminal :  &lt;/p&gt;&lt;pre&gt;&lt;code&gt;git config --global alias.co checkout   
+git config --global alias.br branch   
+git config --global alias.ci commit   
+git config --global alias.st status
+&lt;/code&gt;&lt;/pre&gt; &lt;p&gt;Once you have done this, you can type co, br, ci, st every time you would normaly type checkout, branch, commit, status.  &lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;to&amp;#95;print&amp;#95;the&amp;#95;commits&amp;#95;graph&quot;&gt;&lt;/a&gt;To print the commits graph&lt;/h3&gt; &lt;p&gt;The following alias will enable you print a pretty representation of the commits graph in your terminal window :&lt;/p&gt;&lt;pre&gt;&lt;code&gt;git config --global alias.lg &amp;quot;log --graph --all --pretty=format:'%C&amp;#40;bold&amp;#41;%h%Creset -%C&amp;#40;auto&amp;#41;%d%Creset %s %C&amp;#40;green dim&amp;#41;&amp;#40;%cr&amp;#41;%Creset %C&amp;#40;ul&amp;#41;&amp;lt;%an&amp;gt;&amp;quot;  
+&lt;/code&gt;&lt;/pre&gt; &lt;p&gt;Now, typing &lt;code&gt;git lg&lt;/code&gt; in your repository will print something like this :   &lt;/p&gt;&lt;p&gt;&lt;img src=&quot;/img/git-lg-screenshot.png&quot; width=&quot;100%&quot;&gt;  &lt;/p&gt;&lt;p&gt;The effect of setting aliases is to modify your ~/.gitconfig file, which should now look like this :&lt;/p&gt;&lt;pre&gt;&lt;code&gt;   &amp;#91;user&amp;#93;  
+       name = Valentin Waeselynck  
+       email = val@bandsquare.fr  
+  &amp;#91;alias&amp;#93;  
+       lg = log --graph --all --pretty=format:'%C&amp;#40;bold&amp;#41;%h%Creset -%C&amp;#40;auto&amp;#41;%d%Creset %s %C&amp;#40;green dim&amp;#41;&amp;#40;%cr&amp;#41;%Creset %C&amp;#40;ul&amp;#41;&amp;lt;%an&amp;gt;'  
+       co = checkout  
+       br = branch  
+       ci = commit  
+       st = status  
+  &amp;#91;core&amp;#93;  
+       editor = vim   
+  &amp;#91;filter &amp;quot;media&amp;quot;&amp;#93;  
+       clean = git media clean %f  
+       smudge = git media smudge %f  
+       required = true  
+&lt;/code&gt;&lt;/pre&gt; &lt;h3&gt;&lt;a name=&quot;using&amp;#95;a&amp;#95;git&amp;#95;gui&amp;#95;client&quot;&gt;&lt;/a&gt;Using a git GUI client&lt;/h3&gt; &lt;p&gt;Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use &lt;a href='https://www.sourcetreeapp.com/'&gt;SourceTree&lt;/a&gt;.&lt;/p&gt;
+</description>
+<pubDate>
+Sun, 06 Sep 2015 00:00:00 +0200
+</pubDate>
+</item>
+<item>
+<guid>
+http://blogawesome.com/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
+</guid>
+<link>
+http://blogawesome.com/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
+</link>
+<title>
+Having a good terminal console on OS X in 2015
+</title>
+<description>
+ &lt;p&gt;As a programmer, your terminal console is part of your everyday life.  That's where you launch your local server, start your database, see your heroku logs, try out that mysterious command you found on some forum, etc.  Don't try to escape it; instead, learn to master it and make it comfortable enough that you feel at home using it.  &lt;/p&gt;&lt;p&gt;My current choice for a terminal on OSX is &lt;a href='http://iterm2.com/'&gt;ITerm2 (official website)&lt;/a&gt;.  &lt;/p&gt;&lt;p&gt;&lt;!--more--&gt;  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;installing&amp;#95;iterm2&quot;&gt;&lt;/a&gt;Installing ITerm2&lt;/h2&gt; &lt;p&gt;Nothing tricky here, just download it from the official website.  What you get is a zip archive that unpacks to a .app file. All you have to do is move that file to your Applications folder.  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;adding&amp;#95;some&amp;#95;colors&amp;#95;to&amp;#95;the&amp;#95;console&quot;&gt;&lt;/a&gt;Adding some colors to the console&lt;/h2&gt; &lt;p&gt;I like my console to have a dark background because it's easier on the eyes and environment-friendly.  Also I want to see some relevant information like current *nix user and current directory.  &lt;/p&gt;&lt;p&gt;For this I use a little shell script :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;  # COLORFUL PROMPT  
+  # uncomment for a colored prompt, if the terminal has the capability; turned  
+  # off by default to not distract the user: the focus in a terminal window  
+  # should be on the output of commands, not on the prompt  
+  force&amp;#95;color&amp;#95;prompt=yes  
+  if &amp;#91; -n &amp;quot;$force&amp;#95;color&amp;#95;prompt&amp;quot; &amp;#93;; then  
+    if &amp;#91; -x /usr/bin/tput &amp;#93; &amp;amp;&amp;amp; tput setaf 1 &amp;gt;&amp;amp;/dev/null; then  
+      # We have color support; assume it's compliant with Ecma-48  
+      # &amp;#40;ISO/IEC-6429&amp;#41;. &amp;#40;Lack of such support is extremely rare, and such  
+      # a case would tend to support setf rather than setaf.&amp;#41;  
+      color&amp;#95;prompt=yes  
+    else  
+      color&amp;#95;prompt=  
+    fi  
+  fi  
+  # ANSI color codes  
+  RS=&amp;quot;\&amp;#91;\033&amp;#91;0m\&amp;#93;&amp;quot;  # reset  
+  HC=&amp;quot;\&amp;#91;\033&amp;#91;1m\&amp;#93;&amp;quot;  # hicolor  
+  UL=&amp;quot;\&amp;#91;\033&amp;#91;4m\&amp;#93;&amp;quot;  # underline  
+  INV=&amp;quot;\&amp;#91;\033&amp;#91;7m\&amp;#93;&amp;quot;  # inverse background and foreground  
+  FBLK=&amp;quot;\&amp;#91;\033&amp;#91;30m\&amp;#93;&amp;quot; # foreground black  
+  FRED=&amp;quot;\&amp;#91;\033&amp;#91;31m\&amp;#93;&amp;quot; # foreground red  
+  FGRN=&amp;quot;\&amp;#91;\033&amp;#91;32m\&amp;#93;&amp;quot; # foreground green  
+  FYEL=&amp;quot;\&amp;#91;\033&amp;#91;33m\&amp;#93;&amp;quot; # foreground yellow  
+  FBLE=&amp;quot;\&amp;#91;\033&amp;#91;34m\&amp;#93;&amp;quot; # foreground blue  
+  FMAG=&amp;quot;\&amp;#91;\033&amp;#91;35m\&amp;#93;&amp;quot; # foreground magenta  
+  FCYN=&amp;quot;\&amp;#91;\033&amp;#91;36m\&amp;#93;&amp;quot; # foreground cyan  
+  FWHT=&amp;quot;\&amp;#91;\033&amp;#91;37m\&amp;#93;&amp;quot; # foreground white  
+  BBLK=&amp;quot;\&amp;#91;\033&amp;#91;40m\&amp;#93;&amp;quot; # background black  
+  BRED=&amp;quot;\&amp;#91;\033&amp;#91;41m\&amp;#93;&amp;quot; # background red  
+  BGRN=&amp;quot;\&amp;#91;\033&amp;#91;42m\&amp;#93;&amp;quot; # background green  
+  BYEL=&amp;quot;\&amp;#91;\033&amp;#91;43m\&amp;#93;&amp;quot; # background yellow  
+  BBLE=&amp;quot;\&amp;#91;\033&amp;#91;44m\&amp;#93;&amp;quot; # background blue  
+  BMAG=&amp;quot;\&amp;#91;\033&amp;#91;45m\&amp;#93;&amp;quot; # background magenta  
+  BCYN=&amp;quot;\&amp;#91;\033&amp;#91;46m\&amp;#93;&amp;quot; # background cyan  
+  BWHT=&amp;quot;\&amp;#91;\033&amp;#91;47m\&amp;#93;&amp;quot; # background white  
+  #variables pointing to ANSI color codes  
+  USER&amp;#95;CLR=&amp;quot;$RS$HC$FGRN&amp;quot; # the color of the user name, e.g 'val'  
+  HOST&amp;#95;CLR=&amp;quot;$RS$FYEL&amp;quot; # the color of the host, e.g 'VVV-SATELLITE-P850'  
+  LOC&amp;#95;CLR=&amp;quot;$RS$FGRN&amp;quot; # the color of the location, e.g '&amp;#126;/Documents'  
+  MISC&amp;#95;CLR=&amp;quot;$RS$HC$FYEL&amp;quot; # the color of other symbols  
+  if &amp;#91; &amp;quot;$color&amp;#95;prompt&amp;quot; = yes &amp;#93;; then  
+    #PS1='${debian&amp;#95;chroot:+&amp;#40;$debian&amp;#95;chroot&amp;#41;}\&amp;#91;\033&amp;#91;01;32m\&amp;#93;\u@\h\&amp;#91;\033&amp;#91;00m\&amp;#93;:\&amp;#91;\033&amp;#91;01;34m\&amp;#93;\w\&amp;#91;\033&amp;#91;00m\&amp;#93;\$ '  
+    # primary prompt : contains special characters an sequences for additional info about a session.  
+    #PS1=&amp;quot;$HC$FYEL&amp;#91; $FBLE${debian&amp;#95;chroot:+&amp;#40;$debian&amp;#95;chroot&amp;#41;}\u$FYEL: $FBLE\w $FYEL&amp;#93;\\$ $RS&amp;quot;  
+    PS1=&amp;quot;$HC$MISC&amp;#95;CLR&amp;#91; $USER&amp;#95;CLR\u$HOST&amp;#95;CLR@\h: $LOC&amp;#95;CLR\w $MISC&amp;#95;CLR&amp;#93;\n$USER&amp;#95;CLR\\$ $RS&amp;quot;  
+    # secondary prompt shows just '&amp;gt;'  
+    PS2=&amp;quot;$HC$FYEL&amp;gt; $RS&amp;quot;  
+  else  
+    #PS1='${debian&amp;#95;chroot:+&amp;#40;$debian&amp;#95;chroot&amp;#41;}\u@\h:\w\$ '  
+    # primary prompt : contains special characters an sequences for additional info about a session.  
+    PS1=&amp;quot;&amp;#91; \u: \w &amp;#93;\\$ &amp;quot;  
+    # secondary prompt shows just '&amp;gt;'  
+    PS2=&amp;quot;&amp;gt; &amp;quot;  
+  fi  
+  unset color&amp;#95;prompt force&amp;#95;color&amp;#95;prompt  
+&lt;/code&gt;&lt;/pre&gt;&lt;br /&gt;&lt;p&gt;To use it, I created a colorful&lt;i&gt;prompt.sh file with the above content which I put in a  ~/.my&lt;/i&gt;bash&lt;i&gt;config directory, then called it from my ~/.bash&lt;/i&gt;profile file (which is in charge of initializing my terminal) by adding these lines to it:  &lt;/p&gt;&lt;p&gt;&lt;strong&gt;&lt;code&gt;&amp;#126;/.bash&amp;#95;profile&lt;/code&gt;&lt;/strong&gt;&lt;pre&gt;&lt;code class=&quot;bash&quot;&gt;  # enable colorful prompt  
+  source &amp;#126;/.my&amp;#95;bash&amp;#95;config/colorful&amp;#95;prompt.sh
+ &lt;/code&gt;&lt;/pre&gt;  &lt;/p&gt;&lt;p&gt;You can do it all with a simple text editor like TextMate. Don't hesitate to change the colors to your liking, it should be easy from the above code.  Note that this also works on other *nix operating systems, not just OSX.  &lt;/p&gt;&lt;p&gt;Now you have a pretty terminal, which is the first step towards loving to work in the command line.  Next step is to make it more ergonomic.  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;using&amp;#95;iterm2&amp;#95;:&amp;#95;panes,&amp;#95;tabs,&amp;#95;profiles&amp;#95;and&amp;#95;window&amp;#95;arrangements&quot;&gt;&lt;/a&gt;Using ITerm2 : panes, tabs, profiles and window arrangements&lt;/h2&gt;  &lt;h3&gt;&lt;a name=&quot;organizing&quot;&gt;&lt;/a&gt;Organizing&lt;/h3&gt;  &lt;p&gt;The first thing I find practical in ITerm2 is the possibility to have several shell sessions open next to each other in the same window.  When using ITerm2, you can have several windows, each window has several tabs, each tab is split into panes.  &lt;/p&gt;&lt;p&gt;I recommend using only one window, making it full-screen, and having many tabs each split into a few panes.  It all looks like this :&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;/img/iterm2-screenshot.png&quot; width=&quot;100%&quot;&gt;&lt;/p&gt;&lt;p&gt;&lt;small&gt;In this window, there are 6 tabs, and the current tab has 3 panes&lt;/small&gt;  &lt;/p&gt;&lt;p&gt;I'll typically have one or two tabs per project; for example, for a web development project,  I'll have a tab for the frontend and one for the backend. On the backend tab,  I'll have a small pane for my local database server, one for my backend server,  and a large one for git commands and and other command-line stuff.  &lt;/p&gt;&lt;p&gt;To achieve such a layout, use the Shell menu of ITerm2, where you can see options to create new tabs (CMD-T) and split them into panes (CMD-D, CMD-MAJ-D). You can navigate across tabs with CMD-LEFT and CMD-RIGHT.  &lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;having&amp;#95;a&amp;#95;ready-to-use&amp;#95;terminal&amp;#95;with&amp;#95;profiles&amp;#95;and&amp;#95;window&amp;#95;arrangements&quot;&gt;&lt;/a&gt;Having a ready-to-use terminal with profiles and window arrangements&lt;/h3&gt; &lt;p&gt;You don't want to have to re-create this arrangement every time you start ITerm2.  This is why there are profiles and window arrangements.   &lt;/p&gt;&lt;p&gt;A profile is essentially a pre-defined file system location for a shell session to start in.&lt;br /&gt; If you want to always be in the same location in a certain pane, you'll have to create a profile for it.  &lt;/p&gt;&lt;p&gt;To create a profile, do Profiles &gt; Open Profiles &gt; Edit Profile, then +, then you enter the name and file system location for this profile and you're good to go.  &lt;/p&gt;&lt;p&gt;To have a pane with a specific profile, it's a bit tricky.  Place yourself in a pane, click Shell &gt; Split Vertically, then you will prompted for a profile for the newly created pane.  After that, you can close the older pane. I haven't found a more direct way.  &lt;/p&gt;&lt;p&gt;The last thing to do to save your beautiful tabs/panes layout is to save it in a window arrangement.  To do so, go to Window &gt; Save Window Arrangement.  If you want to start ITerm2 with always the same window arrangement (which you probably do),  you can set a default window arrangement in the Preferences.  &lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;wrapping&amp;#95;up&quot;&gt;&lt;/a&gt;Wrapping up&lt;/h2&gt; &lt;p&gt;I hope this will make your relationship to terminal consoles happier.  As Obi-Wan Kenobi said to Luke in the Millennium Falcon, this is your first step into a larger world.  I was actually pleasantly surprised to discover ITerm2 for Mac, I haven't found something as ergonomic for Ubuntu.&lt;/p&gt;
+</description>
+<pubDate>
+Sun, 06 Sep 2015 00:00:00 +0200
+</pubDate>
+</item>
+<item>
+<guid>
+http://blogawesome.com/posts/2014-12-11-docs.html
+</guid>
+<link>
+http://blogawesome.com/posts/2014-12-11-docs.html
+</link>
+<title>
+Using Cryogen
+</title>
+<description>
+&lt;p&gt;For additional documentation please see the &lt;a href='http://cryogenweb.org'&gt;cryogen site&lt;/a&gt;&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;features&quot;&gt;&lt;/a&gt;Features&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;blog posts and pages with Markdown (default) or AsciiDoc&lt;/li&gt;&lt;li&gt;tags&lt;/li&gt;&lt;li&gt;table of contents generation&lt;/li&gt;&lt;li&gt;Default Twitter Bootstrap theme&lt;/li&gt;&lt;li&gt;plain HTML page templates&lt;/li&gt;&lt;li&gt;code syntax highlighting&lt;/li&gt;&lt;li&gt;Disqus support&lt;/li&gt;&lt;li&gt;GitHub Gist integration&lt;/li&gt;&lt;li&gt;sitemap&lt;/li&gt;&lt;li&gt;Sass/SCSS compilation&lt;/li&gt;&lt;li&gt;RSS&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;!--more--&gt;&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;prerequisites&quot;&gt;&lt;/a&gt;Prerequisites&lt;/h2&gt;&lt;p&gt;You will need &lt;a href='https://github.com/technomancy/leiningen'&gt;Leiningen&lt;/a&gt; 2.5.0 or above installed.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;usage&quot;&gt;&lt;/a&gt;Usage&lt;/h2&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;a&amp;#95;new&amp;#95;site&quot;&gt;&lt;/a&gt;Creating a New Site&lt;/h3&gt;&lt;p&gt;A new site can be created using the Cryogen template as follows:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;lein new cryogen my-blog
+&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;running&amp;#95;the&amp;#95;server&quot;&gt;&lt;/a&gt;Running the Server&lt;/h3&gt;&lt;p&gt;The web server can be started from the &lt;code&gt;my-blog&lt;/code&gt; directory using the &lt;code&gt;lein-ring&lt;/code&gt; plugin:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;lein ring server
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The server will watch for changes in the &lt;code&gt;resources/templates&lt;/code&gt; folder and recompile the content automatically.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;site&amp;#95;configuration&quot;&gt;&lt;/a&gt;Site Configuration&lt;/h3&gt;&lt;p&gt;The site configuration file is found at &lt;code&gt;templates/config.edn&lt;/code&gt;, this file looks as follows:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;{:site-title       &amp;quot;My Awesome Blog&amp;quot;
+ :author           &amp;quot;Bob Bobbert&amp;quot;
+ :description      &amp;quot;This blog is awesome&amp;quot;
+ :site-url         &amp;quot;http://blogawesome.com/&amp;quot;
+ :post-root        &amp;quot;posts&amp;quot;
+ :tag-root         &amp;quot;tags&amp;quot;
+ :page-root        &amp;quot;pages&amp;quot;
+ :blog-prefix      &amp;quot;/blog&amp;quot;
+ :rss-name         &amp;quot;feed.xml&amp;quot;
+ :rss-filters      &amp;#91;&amp;quot;cryogen&amp;quot;&amp;#93;
+ :recent-posts     3
+ :post-date-format &amp;quot;yyyy-MM-dd&amp;quot;
+ :sass-src         nil
+ :sass-dest        nil
+ :resources        &amp;#91;&amp;quot;css&amp;quot; &amp;quot;js&amp;quot; &amp;quot;404.html&amp;quot;&amp;#93;
+ :keep-files       &amp;#91;&amp;quot;.git&amp;quot;&amp;#93;
+ :disqus?          false
+ :disqus-shortname &amp;quot;&amp;quot;
+ :ignored-files    &amp;#91;#&amp;quot;\.#.&amp;#42;&amp;quot; #&amp;quot;.&amp;#42;\.swp$&amp;quot;&amp;#93;}
+&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;post-root&lt;/code&gt; - value prepended to all post uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;tag-root&lt;/code&gt; - value prepended to all tag uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;page-root&lt;/code&gt; - value prepended to all page uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;blog-prefix&lt;/code&gt; - prepended to all uri's (must start with slash), nil by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;rss-name&lt;/code&gt; - name of the rss file generated, nil defaults to &lt;code&gt;rss.xml&lt;/code&gt;&lt;/li&gt;&lt;li&gt;&lt;code&gt;rss-filters&lt;/code&gt; - used to generate tag-based rss feeds for topic-specific rss aggregators. Tags listed here should match tags being used in your posts.&lt;/li&gt;&lt;li&gt;&lt;code&gt;recent-posts&lt;/code&gt; - number of recent posts to display in the sidebar&lt;/li&gt;&lt;li&gt;&lt;code&gt;post-date-format&lt;/code&gt; - date format for your .md or .asc files, yyyy-MM-dd by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;sass-src&lt;/code&gt; - directory containing sources of sass files to be  compiled - defaults to &quot;css&quot; - be sure to include this directory in  your &lt;code&gt;resources&lt;/code&gt; section&lt;/li&gt;&lt;li&gt;&lt;code&gt;sass-dest&lt;/code&gt; - directory where the compiled output CSS would be put    into. defaults to &quot;css&quot; - be sure to include this directory in    your &lt;code&gt;resources&lt;/code&gt; section&lt;/li&gt;&lt;li&gt;&lt;code&gt;resources&lt;/code&gt; - list of folders or files to be copied over from &lt;code&gt;templates&lt;/code&gt; to &lt;code&gt;public&lt;/code&gt;&lt;/li&gt;&lt;li&gt;&lt;code&gt;keep-files&lt;/code&gt; - list of folders or files that are not wiped in the &lt;code&gt;public&lt;/code&gt; directory. For example, this allows to keep a &lt;code&gt;.git&lt;/code&gt; directory there across recompiles of the site to versionize the generated files&lt;/li&gt;&lt;li&gt;&lt;code&gt;disqus?&lt;/code&gt; - set to true if you want disqus enabled on your site&lt;/li&gt;&lt;li&gt;&lt;code&gt;disqus-shortname&lt;/code&gt; - your disqus shortname&lt;/li&gt;&lt;li&gt;&lt;code&gt;ignored-files&lt;/code&gt; - list of regexps matching files the compiler should ignore&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;&lt;a name=&quot;switching&amp;#95;between&amp;#95;markdown&amp;#95;and&amp;#95;asciidoc&quot;&gt;&lt;/a&gt;Switching between Markdown and AsciiDoc&lt;/h3&gt;&lt;p&gt;Cryogen comes with Markdown support as default. If you want to use AsciiDoc instead, open the &lt;code&gt;project.clj&lt;/code&gt; in your created blog (e.g. &lt;code&gt;my-blog&lt;/code&gt;), and change the line in &lt;code&gt;:dependencies&lt;/code&gt; that says &lt;code&gt;cryogen-markdown&lt;/code&gt; to &lt;code&gt;cryogen-asciidoc&lt;/code&gt;. Instead of looking for files ending in &lt;code&gt;.md&lt;/code&gt; in the &lt;code&gt;md&lt;/code&gt; directory, the compiler will now look for files ending in &lt;code&gt;.asc&lt;/code&gt; in the &lt;code&gt;asc&lt;/code&gt; directory.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;posts&quot;&gt;&lt;/a&gt;Creating Posts&lt;/h3&gt;&lt;p&gt;The posts are located in the &lt;code&gt;resources/templates/md/posts&lt;/code&gt; for Markdown files or &lt;code&gt;resources/templates/asc/posts&lt;/code&gt; for AsciiDoc files. Posts are written using Markdown or AsciiDoc and each post file should start with the date in the format of &lt;code&gt;yyyy-dd-MM&lt;/code&gt; or what is defined in the &lt;code&gt;:post-date-format&lt;/code&gt; key of &lt;code&gt;config.edn&lt;/code&gt;. The files have to have the extension &lt;code&gt;.md&lt;/code&gt; or &lt;code&gt;.asc&lt;/code&gt; respectively. The compiler will link the posts in order for you using the dates. A valid post file written in Markdown might look as follows:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;2014-19-12-post1.md
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The post content must start with a map containing the post metadata:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;{:title &amp;quot;First Post!&amp;quot;
+ :layout :post
+ :tags  &amp;#91;&amp;quot;tag1&amp;quot; &amp;quot;tag3&amp;quot;&amp;#93;}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The metadata contains the following keys:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;:title&lt;/code&gt; - the title of the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:author&lt;/code&gt; - optional key to display the name of the author for the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:layout&lt;/code&gt; - the layout template to use for the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:tags&lt;/code&gt; - the tags associated with this post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:toc&lt;/code&gt; - boolean indicating whether table of contents should be generated, defaults to false&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;The rest of the post should consist of valid Markdown content, eg:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;## Hello World
+
+This is my first post!
+
+check out this sweet code
+
+    &amp;#40;defn foo &amp;#91;bar&amp;#93;
+      &amp;#40;bar&amp;#41;&amp;#41;
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+Nunc sodales pharetra massa, eget fringilla ex ornare et.
+Nunc mattis diam ac urna finibus sodales. Etiam sed ipsum
+et purus commodo bibendum. Cras libero magna, fringilla
+tristique quam sagittis, volutpat auctor mi. Aliquam luctus,
+nulla et vestibulum finibus, nibh justo semper tortor, nec
+vestibulum tortor est nec nisi.
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;If you wish to enable comments on your posts, create a &lt;a href='https://disqus.com/'&gt;disqus&lt;/a&gt; account and &lt;a href='https://disqus.com/admin/create/'&gt;register&lt;/a&gt; your blog. &lt;code&gt;disqus?&lt;/code&gt; should be set to &lt;code&gt;true&lt;/code&gt; in the config and you must add your &lt;code&gt;disqus-shortname&lt;/code&gt;.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;pages&quot;&gt;&lt;/a&gt;Creating Pages&lt;/h3&gt;&lt;p&gt;Pages work similarly to posts, but aren't grouped by date. An example page might be an about page.&lt;/p&gt;&lt;p&gt;The pages contain the following metadata:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;:title&lt;/code&gt; - the title of the page&lt;/li&gt;&lt;li&gt;&lt;code&gt;:layout&lt;/code&gt; - the layout template for the page&lt;/li&gt;&lt;li&gt;&lt;code&gt;:page-index&lt;/code&gt; - a number representing the order of the page in the navbar/sidebar&lt;/li&gt;&lt;li&gt;&lt;code&gt;:navbar?&lt;/code&gt; - determines whether the page should be shown in the navbar, &lt;code&gt;false&lt;/code&gt; by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;:toc&lt;/code&gt; - boolean indicating whether table of contents should be generated, defaults to false&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;&lt;a name=&quot;customizing&amp;#95;layouts&quot;&gt;&lt;/a&gt;Customizing Layouts&lt;/h3&gt;&lt;p&gt;Cryogen uses &lt;a href='https://github.com/yogthos/Selmer'&gt;Selmer&lt;/a&gt; templating engine for layouts. Please refer to its documentation to see the supported tags and filters for the layouts.&lt;/p&gt;&lt;p&gt;The layouts are contained in the &lt;code&gt;resources/templates/html/layouts&lt;/code&gt; folder of the project. By default, the &lt;code&gt;base.html&lt;/code&gt; layout is used to provide the general layout for the site. This is where you would add static resources such as CSS and Js assets as well as define headers and footers for your site.&lt;/p&gt;&lt;p&gt;Each page layout should have a name that matches the &lt;code&gt;:layout&lt;/code&gt; key in the page metadata and end with &lt;code&gt;.html&lt;/code&gt;. Page layouts extend the base layout and should only contain the content relaveant to the page inside the &lt;code&gt;content&lt;/code&gt; block. For example, the &lt;code&gt;tag&lt;/code&gt; layout is located in &lt;code&gt;tag.html&lt;/code&gt; and looks as follows:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;xml&quot;&gt;{% extends &amp;quot;templates/html/layouts/base.html&amp;quot; %}
+{% block content %}
+&amp;lt;div id=&amp;quot;posts-by-tag&amp;quot;&amp;gt;
+    &amp;lt;h2&amp;gt;Posts tagged {{name}}&amp;lt;/h2&amp;gt;
+    &amp;lt;ul&amp;gt;
+    {% for post in posts %}
+        &amp;lt;li&amp;gt;
+            &amp;lt;a href=&amp;quot;{{post.uri}}&amp;quot;&amp;gt;{{post.title}}&amp;lt;/a&amp;gt;
+        &amp;lt;/li&amp;gt;
+    {% endfor %}
+    &amp;lt;/ul&amp;gt;
+&amp;lt;/div&amp;gt;
+{% endblock %}
+&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;code&amp;#95;syntax&amp;#95;highlighting&quot;&gt;&lt;/a&gt;Code Syntax Highlighting&lt;/h3&gt;&lt;p&gt;Cryogen uses &lt;a href='https://highlightjs.org/'&gt;Highlight.js&lt;/a&gt; for code syntax highlighting. You can add more languages by replacing &lt;code&gt;templates/js/highlight.pack.js&lt;/code&gt; with a customized package from &lt;a href='https://highlightjs.org/download/'&gt;here&lt;/a&gt;.&lt;/p&gt;&lt;p&gt;The &lt;code&gt; initHighlightingOnLoad&lt;/code&gt; function is called in &lt;code&gt;templates/html/layouts/base.html&lt;/code&gt;.&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;xml&quot;&gt;&amp;lt;script&amp;gt;hljs.initHighlightingOnLoad&amp;#40;&amp;#41;;&amp;lt;/script&amp;gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;h2&gt;&lt;a name=&quot;deploying&amp;#95;your&amp;#95;site&quot;&gt;&lt;/a&gt;Deploying Your Site&lt;/h2&gt;&lt;p&gt;The generated static content will be found under the &lt;code&gt;resources/public&lt;/code&gt; folder. Simply copy the content to a static folder for a server sugh as Nginx or Apache and your site is now ready for service.&lt;/p&gt;&lt;p&gt;A sample Nginx configuration that's placed in &lt;code&gt;/etc/nginx/sites-available/default&lt;/code&gt; can be seen below:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;javascript&quot;&gt;server{
+  listen 80 default&amp;#95;server;
+  listen &amp;#91;::&amp;#93;:80 default&amp;#95;server ipv6only=on;
+  server&amp;#95;name localhost &amp;lt;yoursite.com&amp;gt; &amp;lt;www.yoursite.com&amp;gt;;
+
+  access&amp;#95;log /var/log/blog&amp;#95;access.log;
+  error&amp;#95;log /var/log/blog&amp;#95;error.log;
+
+  location / {
+    alias /var/blog/;
+    error&amp;#95;page    404 = /404.html;
+  }
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Simply set &lt;code&gt;yoursite.com&lt;/code&gt; to the domain of your site in the above configuration and ensure the static content is available at &lt;code&gt;/var/blog/&lt;/code&gt;. Finally, place your custom error page in the &lt;code&gt;/var/blog/404.html&lt;/code&gt; file.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;some&amp;#95;sites&amp;#95;made&amp;#95;with&amp;#95;cryogen&quot;&gt;&lt;/a&gt;Some Sites Made With Cryogen&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;&lt;a href='http://carmenla.me/blog/index.html'&gt;My personal blog&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://cryogenweb.org'&gt;Cryogen Documentation Site&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://yogthos.net/'&gt;Yogthos blog&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://www.clojure.tn'&gt;Clojure :in Tunisia&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://dl1ely.github.io'&gt;dl1ely.github.io&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://jonase.github.io/nil-recur'&gt;nil/recur&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://tangrammer.github.io/'&gt;on the clojure move&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://blog.jethrokuan.com/'&gt;cognizance&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;
+</description>
+<pubDate>
+Thu, 11 Dec 2014 00:00:00 +0100
+</pubDate>
+</item>
+</channel>
+</rss>

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Having a good terminal console on OS X in 2015</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='http://fonts.googleapis.com/css?family=Alegreya:400italic,700italic,400,700' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="../css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">September 6, 2015</div>
+        
+    </div>
+    <h2>Having a good terminal console on OS X in 2015</h2>
+</div>
+<div>
+    <ol class="contents"><li><a href="#installing_iterm2">Installing ITerm2</a></li><li><a href="#adding_some_colors_to_the_console">Adding some colors to the console</a></li><li><a href="#using_iterm2_:_panes,_tabs,_profiles_and_window_arrangements">Using ITerm2 : panes, tabs, profiles and window arrangements</a></li><ol><li><a href="#organizing">Organizing</a></li><li><a href="#having_a_ready-to-use_terminal_with_profiles_and_window_arrangements">Having a ready-to-use terminal with profiles and window arrangements</a></li></ol><li><a href="#wrapping_up">Wrapping up</a></li></ol>
+     <p>As a programmer, your terminal console is part of your everyday life.  That's where you launch your local server, start your database, see your heroku logs, try out that mysterious command you found on some forum, etc.  Don't try to escape it; instead, learn to master it and make it comfortable enough that you feel at home using it.  </p><p>My current choice for a terminal on OSX is <a href='http://iterm2.com/'>ITerm2 (official website)</a>.  </p><p><!--more-->  </p><h2><a name="installing&#95;iterm2"></a>Installing ITerm2</h2> <p>Nothing tricky here, just download it from the official website.  What you get is a zip archive that unpacks to a .app file. All you have to do is move that file to your Applications folder.  </p><h2><a name="adding&#95;some&#95;colors&#95;to&#95;the&#95;console"></a>Adding some colors to the console</h2> <p>I like my console to have a dark background because it's easier on the eyes and environment-friendly.  Also I want to see some relevant information like current *nix user and current directory.  </p><p>For this I use a little shell script :</p><pre><code class="bash">  # COLORFUL PROMPT  
+  # uncomment for a colored prompt, if the terminal has the capability; turned  
+  # off by default to not distract the user: the focus in a terminal window  
+  # should be on the output of commands, not on the prompt  
+  force&#95;color&#95;prompt=yes  
+  if &#91; -n &quot;$force&#95;color&#95;prompt&quot; &#93;; then  
+    if &#91; -x /usr/bin/tput &#93; &amp;&amp; tput setaf 1 &gt;&amp;/dev/null; then  
+      # We have color support; assume it's compliant with Ecma-48  
+      # &#40;ISO/IEC-6429&#41;. &#40;Lack of such support is extremely rare, and such  
+      # a case would tend to support setf rather than setaf.&#41;  
+      color&#95;prompt=yes  
+    else  
+      color&#95;prompt=  
+    fi  
+  fi  
+  # ANSI color codes  
+  RS=&quot;\&#91;\033&#91;0m\&#93;&quot;  # reset  
+  HC=&quot;\&#91;\033&#91;1m\&#93;&quot;  # hicolor  
+  UL=&quot;\&#91;\033&#91;4m\&#93;&quot;  # underline  
+  INV=&quot;\&#91;\033&#91;7m\&#93;&quot;  # inverse background and foreground  
+  FBLK=&quot;\&#91;\033&#91;30m\&#93;&quot; # foreground black  
+  FRED=&quot;\&#91;\033&#91;31m\&#93;&quot; # foreground red  
+  FGRN=&quot;\&#91;\033&#91;32m\&#93;&quot; # foreground green  
+  FYEL=&quot;\&#91;\033&#91;33m\&#93;&quot; # foreground yellow  
+  FBLE=&quot;\&#91;\033&#91;34m\&#93;&quot; # foreground blue  
+  FMAG=&quot;\&#91;\033&#91;35m\&#93;&quot; # foreground magenta  
+  FCYN=&quot;\&#91;\033&#91;36m\&#93;&quot; # foreground cyan  
+  FWHT=&quot;\&#91;\033&#91;37m\&#93;&quot; # foreground white  
+  BBLK=&quot;\&#91;\033&#91;40m\&#93;&quot; # background black  
+  BRED=&quot;\&#91;\033&#91;41m\&#93;&quot; # background red  
+  BGRN=&quot;\&#91;\033&#91;42m\&#93;&quot; # background green  
+  BYEL=&quot;\&#91;\033&#91;43m\&#93;&quot; # background yellow  
+  BBLE=&quot;\&#91;\033&#91;44m\&#93;&quot; # background blue  
+  BMAG=&quot;\&#91;\033&#91;45m\&#93;&quot; # background magenta  
+  BCYN=&quot;\&#91;\033&#91;46m\&#93;&quot; # background cyan  
+  BWHT=&quot;\&#91;\033&#91;47m\&#93;&quot; # background white  
+  #variables pointing to ANSI color codes  
+  USER&#95;CLR=&quot;$RS$HC$FGRN&quot; # the color of the user name, e.g 'val'  
+  HOST&#95;CLR=&quot;$RS$FYEL&quot; # the color of the host, e.g 'VVV-SATELLITE-P850'  
+  LOC&#95;CLR=&quot;$RS$FGRN&quot; # the color of the location, e.g '&#126;/Documents'  
+  MISC&#95;CLR=&quot;$RS$HC$FYEL&quot; # the color of other symbols  
+  if &#91; &quot;$color&#95;prompt&quot; = yes &#93;; then  
+    #PS1='${debian&#95;chroot:+&#40;$debian&#95;chroot&#41;}\&#91;\033&#91;01;32m\&#93;\u@\h\&#91;\033&#91;00m\&#93;:\&#91;\033&#91;01;34m\&#93;\w\&#91;\033&#91;00m\&#93;\$ '  
+    # primary prompt : contains special characters an sequences for additional info about a session.  
+    #PS1=&quot;$HC$FYEL&#91; $FBLE${debian&#95;chroot:+&#40;$debian&#95;chroot&#41;}\u$FYEL: $FBLE\w $FYEL&#93;\\$ $RS&quot;  
+    PS1=&quot;$HC$MISC&#95;CLR&#91; $USER&#95;CLR\u$HOST&#95;CLR@\h: $LOC&#95;CLR\w $MISC&#95;CLR&#93;\n$USER&#95;CLR\\$ $RS&quot;  
+    # secondary prompt shows just '&gt;'  
+    PS2=&quot;$HC$FYEL&gt; $RS&quot;  
+  else  
+    #PS1='${debian&#95;chroot:+&#40;$debian&#95;chroot&#41;}\u@\h:\w\$ '  
+    # primary prompt : contains special characters an sequences for additional info about a session.  
+    PS1=&quot;&#91; \u: \w &#93;\\$ &quot;  
+    # secondary prompt shows just '&gt;'  
+    PS2=&quot;&gt; &quot;  
+  fi  
+  unset color&#95;prompt force&#95;color&#95;prompt  
+</code></pre><br /><p>To use it, I created a colorful<i>prompt.sh file with the above content which I put in a  ~/.my</i>bash<i>config directory, then called it from my ~/.bash</i>profile file (which is in charge of initializing my terminal) by adding these lines to it:  </p><p><strong><code>&#126;/.bash&#95;profile</code></strong><pre><code class="bash">  # enable colorful prompt  
+  source &#126;/.my&#95;bash&#95;config/colorful&#95;prompt.sh
+ </code></pre>  </p><p>You can do it all with a simple text editor like TextMate. Don't hesitate to change the colors to your liking, it should be easy from the above code.  Note that this also works on other *nix operating systems, not just OSX.  </p><p>Now you have a pretty terminal, which is the first step towards loving to work in the command line.  Next step is to make it more ergonomic.  </p><h2><a name="using&#95;iterm2&#95;:&#95;panes,&#95;tabs,&#95;profiles&#95;and&#95;window&#95;arrangements"></a>Using ITerm2 : panes, tabs, profiles and window arrangements</h2>  <h3><a name="organizing"></a>Organizing</h3>  <p>The first thing I find practical in ITerm2 is the possibility to have several shell sessions open next to each other in the same window.  When using ITerm2, you can have several windows, each window has several tabs, each tab is split into panes.  </p><p>I recommend using only one window, making it full-screen, and having many tabs each split into a few panes.  It all looks like this :</p><p><img src="/img/iterm2-screenshot.png" width="100%"></p><p><small>In this window, there are 6 tabs, and the current tab has 3 panes</small>  </p><p>I'll typically have one or two tabs per project; for example, for a web development project,  I'll have a tab for the frontend and one for the backend. On the backend tab,  I'll have a small pane for my local database server, one for my backend server,  and a large one for git commands and and other command-line stuff.  </p><p>To achieve such a layout, use the Shell menu of ITerm2, where you can see options to create new tabs (CMD-T) and split them into panes (CMD-D, CMD-MAJ-D). You can navigate across tabs with CMD-LEFT and CMD-RIGHT.  </p><h3><a name="having&#95;a&#95;ready-to-use&#95;terminal&#95;with&#95;profiles&#95;and&#95;window&#95;arrangements"></a>Having a ready-to-use terminal with profiles and window arrangements</h3> <p>You don't want to have to re-create this arrangement every time you start ITerm2.  This is why there are profiles and window arrangements.   </p><p>A profile is essentially a pre-defined file system location for a shell session to start in.<br /> If you want to always be in the same location in a certain pane, you'll have to create a profile for it.  </p><p>To create a profile, do Profiles > Open Profiles > Edit Profile, then +, then you enter the name and file system location for this profile and you're good to go.  </p><p>To have a pane with a specific profile, it's a bit tricky.  Place yourself in a pane, click Shell > Split Vertically, then you will prompted for a profile for the newly created pane.  After that, you can close the older pane. I haven't found a more direct way.  </p><p>The last thing to do to save your beautiful tabs/panes layout is to save it in a window arrangement.  To do so, go to Window > Save Window Arrangement.  If you want to start ITerm2 with always the same window arrangement (which you probably do),  you can set a default window arrangement in the Preferences.  </p><h2><a name="wrapping&#95;up"></a>Wrapping up</h2> <p>I hope this will make your relationship to terminal consoles happier.  As Obi-Wan Kenobi said to Luke in the Millennium Falcon, this is your first step into a larger world.  I was actually pleasantly surprised to discover ITerm2 for Mac, I haven't found something as ergonomic for Ubuntu.</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/tags/tools.html">tools</a>
+    
+    <a href="/tags/tutorial.html">tutorial</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        <a href="/posts/2015-09-06-productive-git-setup.html">&laquo; Productive Git setup</a>
+        
+        
+        <a class="right" href="/posts/2014-12-11-docs.html">Using Cryogen &raquo;</a>
+        
+    </div>
+
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <h3>Links</h3>
+                <ul id="links">
+                    <li><a href="http://cryogenweb.org/docs/home.html">Cryogen Docs</a></li>
+                    <li><a href="http://carmenla.me/blog/index.html">Carmen's Blog</a></li>
+                    
+                    <li><a href="/pages/another-page.html">Another Page</a></li>
+                    
+                </ul>
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2015-09-06-productive-git-setup.html">Productive Git setup</a></li>
+                        
+                        <li><a href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Having a good terminal console on OS X in 2015</a></li>
+                        
+                        <li><a href="/posts/2014-12-11-docs.html">Using Cryogen</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/tags/tools.html">tools</a></li>
+                        
+                        <li><a href="/tags/tutorial.html">tutorial</a></li>
+                        
+                        <li><a href="/tags/cryogen.html">cryogen</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="../js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+</body>
+</html>
