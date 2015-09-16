@@ -67,7 +67,7 @@ body {
 #content {
     background-color: #fff;
     border-radius: 3px;
-    box-shadow: 0 0 0 0,0 6px 12px rgba(34,34,34,0.1);
+    //box-shadow: 0 0 0 0,0 6px 12px rgba(34,34,34,0.1);
 }
 
 footer {
@@ -152,4 +152,44 @@ pre, code, .hljs {
         float:left;
         text-align: left;
     }
+}
+
+/* Side notes */
+
+.sn {
+    display: none;
+}
+
+.sn.sn--visible {
+    color: #BD7435;
+}
+
+u.sn, ins.sn {
+    text-decoration: none;
+}
+
+.sn.sn--expanded {
+    display: block;
+    padding: 5px 10px;
+}
+
+.sn.sn--collapsed {
+    display: inline;
+}
+
+.sn-avatar {
+    width: 21px;
+    margin-right: 6px;
+    border-radius: 1000px;
+    float: left;
+    margin-top: 0px;
+}
+
+.sn-toggle {
+    cursor: pointer;
+    font-size: 11px;
+}
+
+.sn-toggle:hover {
+    text-decoration: underline;
 }

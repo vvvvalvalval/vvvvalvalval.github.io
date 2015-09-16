@@ -12,11 +12,168 @@ http://blogawesome.com/
 This blog is awesome
 </description>
 <lastBuildDate>
-Sun, 06 Sep 2015 16:27:08 +0200
+Wed, 16 Sep 2015 23:38:44 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://blogawesome.com/posts/2015-09-16-bottup-approach-to-reagent-state.html
+</guid>
+<link>
+http://blogawesome.com/posts/2015-09-16-bottup-approach-to-reagent-state.html
+</link>
+<title>
+A bottom-up approach to state in Reagent
+</title>
+<description>
+&lt;p&gt;In this post, I'll present an alternative way of managing state in Reagent applications to what is currently made popular by libraries like &lt;a href='https://github.com/Day8/re-frame'&gt;Re-frame&lt;/a&gt;.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;tl;dr&quot;&gt;&lt;/a&gt;TL;DR&lt;/h2&gt;&lt;p&gt;We'll be able to declare 'local state' inside our Reagent components, which feels like ephemeral local atoms but is accessible globally and is Figwheel-reloadable.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;End result&lt;/strong&gt; : &lt;iframe src=&quot;https://player.vimeo.com/video/139510973&quot; width=&quot;100%&quot; height=&quot;330&quot; frameborder=&quot;0&quot; webkitallowfullscreen mozallowfullscreen allowfullscreen&gt;&lt;/iframe&gt;&lt;/p&gt;&lt;p&gt;(watch it in HD &lt;a href=&quot;https://vimeo.com/139510973&quot; target=&quot;_blank&quot;&gt;here&lt;/a&gt;)&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;rationale&quot;&gt;&lt;/a&gt;Rationale&lt;/h2&gt;&lt;p&gt;From what I have seen, the currently most popular approach to state management in Reagent applications is to have one global Reactive Atom and to centralize the behaviour for updating this Ratom.&lt;/p&gt;&lt;p&gt;I completely agree that this approach is very sound for a large space of applications; it also has the advantage of making your code &lt;a href='https://github.com/bhauman/lein-figwheel#writing-reloadable-code'&gt;Figwheel-reloadable&lt;/a&gt; out of the box.&lt;/p&gt;&lt;p&gt;However, I do believe this approach has its limitations. Basing everything on a global ratom encourages your components to leverage a lot of context, making them less 'portable'. More importantly, I find this forces you to have a top-down approach to state management: you need to design the whole schema for your app state, and account for everything that could happen to it from the very start.&lt;/p&gt;&lt;p&gt;Sometimes, I feel I do not want this. Instead, I want my components to behave not as partial views of some global state, but as 'micro-applications', managing their own state instead of deferring this to some global decision maker. I like the idea that my components are autonomous, and can just be plugged into their parents without much knowledge of their context. This is what I call a &lt;em&gt;bottom-up&lt;/em&gt; approach to state management. &lt;span class=&quot;sn&quot;&gt;This is about the only way of doing things in libraries like AngularJS, in which directives just have local state and are meant to be autonomous. What I find great in Reagent is that I can combine both approaches.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;In this post, I'll present a way of achieving this, while retaining some of the great benefits of the top-down approach.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;requirements&quot;&gt;&lt;/a&gt;Requirements&lt;/h2&gt;&lt;p&gt;Our goal is to abide by the following requirements :&lt;/p&gt;&lt;ol&gt;&lt;li&gt;We want to make Reagent components with local state. In particular, the lifecycle of this local state is bound to the lifecycle of the component: it gets initialized when the component mounts, it gets cleaned up when the component unmounts.&lt;/li&gt;&lt;li&gt;We want this local state managed by the component, not externally&lt;/li&gt;&lt;li&gt;This 'local state' is actually perceptible from the global Reactive Atom of our app. This way, our system has the 'all state in one place' property, a.k.a 'email me your state and I'll see exactly what you see'.&lt;/li&gt;&lt;li&gt;This local state is &lt;em&gt;reloadable&lt;/em&gt;, i.e when we are developing with Figwheel, we don't have to re-create this state each time we make a code change.&lt;/li&gt;&lt;/ol&gt;&lt;h2&gt;&lt;a name=&quot;the&amp;#95;traditional&amp;#95;approach&amp;#95;to&amp;#95;local-state&amp;#95;in&amp;#95;reagent&quot;&gt;&lt;/a&gt;The traditional approach to local-state in Reagent&lt;/h2&gt;&lt;p&gt;As we can learn from the &lt;a href='https://reagent-project.github.io/'&gt;project page&lt;/a&gt;, the traditional way of making components with local state is as follows:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;instead of writing a rendering function, you write a 'wrapper' function which &lt;em&gt;returns&lt;/em&gt; a rendering function.&lt;/li&gt;&lt;li&gt;the 'wrapper' function initializes some local state in the form of ratoms stored in locals of the wrapper function&lt;/li&gt;&lt;li&gt;the rendering function just closes over these locals and uses them.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;This is all very neat and intuitive, but it does not quite comply to our requirements : it's not reachable from our global state ratom, and it's not figwheel-reloadable.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;strategy&quot;&gt;&lt;/a&gt;Strategy&lt;/h2&gt;&lt;p&gt;Here is how we'll implement this :&lt;/p&gt;&lt;ul&gt;&lt;li&gt;we still have a unique global ratom, which will hold &lt;em&gt;all the state&lt;/em&gt; of the application (including component-local state)&lt;/li&gt;&lt;li&gt;instead of creating local ratoms, stateful components will be handed a 'location' (a Cursor) in the global state where to put their local state.&lt;/li&gt;&lt;li&gt;they will initialize this local state when they mount, and clean it when they unmount&lt;/li&gt;&lt;li&gt;we'll also need some tricks to make this robust to figwheel code reloads.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;&lt;a name=&quot;example&quot;&gt;&lt;/a&gt;Example&lt;/h2&gt;&lt;p&gt;I'll demonstrate this with a very poor, ugly version of TODO MVC.&lt;/p&gt;&lt;p&gt;Let's first lay out the 'model' of our app:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;reagent.core :as r&amp;#93;&amp;#41;
+
+;; this atom holds the global state, we use `defonce` to make it reloadable
+&amp;#40;defonce todo-state-atom &amp;#40;r/atom {:todos &amp;#91;&amp;#93;}&amp;#41;&amp;#41;
+
+;; here's a little helper to generate unique ids
+&amp;#40;defonce next-id &amp;#40;atom 0&amp;#41;&amp;#41;
+&amp;#40;defn gen-id &amp;#91;&amp;#93; &amp;#40;swap! next-id inc&amp;#41;&amp;#41;
+
+;; these 3 functions are for manipulating the state
+&amp;#40;defn add-todo &amp;#91;todo-state&amp;#93; &amp;#40;update todo-state :todos conj {:id &amp;#40;gen-id&amp;#41; :text &amp;quot;&amp;quot;}&amp;#41;&amp;#41;
+
+&amp;#40;defn delete-todo &amp;#91;todo-state {:keys &amp;#91;id&amp;#93;}&amp;#93;
+  &amp;#40;update todo-state :todos &amp;#40;fn &amp;#91;todos&amp;#93; &amp;#40;-&amp;gt;&amp;gt; todos &amp;#40;remove #&amp;#40;= &amp;#40;:id %&amp;#41; id&amp;#41;&amp;#41; vec&amp;#41;&amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;defn update-todo &amp;#91;todo-state {:keys &amp;#91;id&amp;#93; :as todo}&amp;#93;
+  &amp;#40;update todo-state :todos &amp;#40;fn &amp;#91;todos&amp;#93; &amp;#40;-&amp;gt;&amp;gt; todos &amp;#40;map #&amp;#40;if &amp;#40;= &amp;#40;:id %&amp;#41; id&amp;#41; todo %&amp;#41;&amp;#41; vec&amp;#41;&amp;#41;&amp;#41;&amp;#41;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now, let's see how to implement the view.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;the&amp;#95;traditional&amp;#95;way:&amp;#95;with&amp;#95;old&amp;#95;fashioned&amp;#95;locals&quot;&gt;&lt;/a&gt;The traditional way: with old fashioned locals&lt;/h3&gt;&lt;p&gt;As a reference for comparison, we'll start by implementing it the 'traditional' Reagent way : with local ratoms to hold the local state.&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;;; ... and here's our UI :
+&amp;#40;declare &amp;lt;todos-list&amp;gt; &amp;lt;todo-item&amp;gt;&amp;#41;
+
+&amp;#40;defn &amp;lt;todos-list&amp;gt; &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;update-me! #&amp;#40;swap! todo-state-atom update-todo %&amp;#41;
+        delete-me! #&amp;#40;swap! todo-state-atom delete-todo %&amp;#41;&amp;#93;
+    &amp;#91;:div.container
+     &amp;#91;:h2 &amp;quot;TODO&amp;quot;&amp;#93;
+     &amp;#91;:ul
+      &amp;#40;for &amp;#91;todo &amp;#40;:todos @todo-state-atom&amp;#41;&amp;#93;
+        &amp;#94;{:key &amp;#40;:id todo&amp;#41;} &amp;#91;&amp;lt;todo-item&amp;gt; todo update-me! delete-me!&amp;#93;
+        &amp;#41;&amp;#93;
+     &amp;#91;:button.btn.btn-success {:on-click #&amp;#40;swap! todo-state-atom add-todo&amp;#41;} &amp;quot;Add&amp;quot;&amp;#93;
+
+     &amp;#91;:div
+      &amp;#91;:h2 &amp;quot;State&amp;quot;&amp;#93;
+      &amp;#91;:pre &amp;#40;with-out-str &amp;#40;pprint/pprint @todo-state-atom&amp;#41;&amp;#41;&amp;#93;&amp;#93;&amp;#93;&amp;#41;&amp;#41;
+
+&amp;#40;defn &amp;lt;todo-item&amp;gt; &amp;#91;{:keys &amp;#91;id&amp;#93;} update-me! delete-me!&amp;#93;
+  &amp;#40;let &amp;#91;local-state &amp;#40;r/atom {:editing false}&amp;#41;&amp;#93;
+    &amp;#40;fn &amp;#91;{:keys &amp;#91;id text&amp;#93; :as todo} update-me! delete-me!&amp;#93;
+      &amp;#40;if &amp;#40;:editing @local-state&amp;#41;
+        &amp;#91;:li
+         &amp;#91;:span &amp;quot;type in some awesome text :&amp;quot;&amp;#93;
+         &amp;#91;:input {:type &amp;quot;text&amp;quot; :value text :on-change #&amp;#40;update-me! &amp;#40;assoc todo :text &amp;#40;-&amp;gt; % .-target .-value&amp;#41;&amp;#41;&amp;#41;}&amp;#93;
+         &amp;#91;:button {:on-click #&amp;#40;swap! local-state assoc :editing false&amp;#41;} &amp;quot;Done&amp;quot;&amp;#93;&amp;#93;
+        &amp;#91;:li
+         &amp;#91;:span &amp;quot;text: &amp;quot; text&amp;#93;
+         &amp;#91;:button {:on-click #&amp;#40;swap! local-state assoc :editing true&amp;#41;} &amp;quot;Edit&amp;quot;&amp;#93;
+         &amp;#91;:button {:on-click #&amp;#40;delete-me! todo&amp;#41;} &amp;quot;Remove&amp;quot;&amp;#93;&amp;#93;&amp;#41;
+      &amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This is the most straightforward way of doing things, but as we said earlier, it does not yield an optimal result: the local state is not reachable from the global atom, not does it survive code reloads. Let's make this better.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;the&amp;#95;new&amp;#95;way:&amp;#95;with&amp;#95;managed&amp;#95;cursors&quot;&gt;&lt;/a&gt;The new way: with managed cursors&lt;/h3&gt;&lt;p&gt;We'll store the local state in cursors of the global ratom, instead of ratoms stored in locals.&lt;/p&gt;&lt;p&gt;Of course, now that we're not using locals, we can no longer rely on garbage collection to clean up after us, so we have to do it explicitly using lifecycle methods.&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;;; in this cursor, we'll put the local state of each list item
+&amp;#40;defonce todos-state-cursor &amp;#40;r/cursor todo-state-atom &amp;#91;:todo-state&amp;#93;&amp;#41;&amp;#41;
+
+&amp;#40;declare &amp;lt;todos-list&amp;gt; &amp;lt;todo-item&amp;gt; &amp;lt;todo-item-plugged&amp;gt;&amp;#41;
+
+&amp;#40;defn &amp;lt;todos-list&amp;gt; &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;update-me! #&amp;#40;swap! todo-state-atom update-todo %&amp;#41;
+        delete-me! #&amp;#40;swap! todo-state-atom delete-todo %&amp;#41;&amp;#93;
+    &amp;#91;:div.container
+     &amp;#91;:h2 &amp;quot;TODO&amp;quot;&amp;#93;
+     &amp;#91;:ul
+      &amp;#40;for &amp;#91;todo &amp;#40;:todos @todo-state-atom&amp;#41;&amp;#93;
+        &amp;#94;{:key &amp;#40;:id todo&amp;#41;} &amp;#91;&amp;lt;todo-item&amp;gt; todos-state-cursor todo update-me! delete-me!&amp;#93;
+        &amp;#41;&amp;#93;
+     &amp;#91;:button.btn.btn-success {:on-click #&amp;#40;swap! todo-state-atom add-todo&amp;#41;} &amp;quot;Add&amp;quot;&amp;#93;
+
+     &amp;#91;:div
+      &amp;#91;:h2 &amp;quot;State&amp;quot;&amp;#93;
+      &amp;#91;:pre &amp;#40;with-out-str &amp;#40;pprint/pprint @todo-state-atom&amp;#41;&amp;#41;&amp;#93;&amp;#93;&amp;#93;&amp;#41;&amp;#41;
+
+&amp;#40;defn &amp;lt;todo-item&amp;gt; &amp;#91;parent-atom {:keys &amp;#91;id&amp;#93;} update-me! delete-me!&amp;#93;
+  &amp;#40;let &amp;#91;local-state-cursor &amp;#40;r/cursor parent-atom &amp;#91;id&amp;#93;&amp;#41;&amp;#93;
+    &amp;#40;r/create-class
+      {:component-will-mount &amp;#40;fn &amp;#91;&amp;#95;&amp;#93; &amp;#40;when-not @local-state-cursor ;; setting up
+                                       &amp;#40;reset! local-state-cursor {:editing false}&amp;#41;&amp;#41;&amp;#41;
+       :component-will-unmount &amp;#40;fn &amp;#91;&amp;#95;&amp;#93; &amp;#40;swap! parent-atom dissoc id&amp;#41;&amp;#41; ;; cleaning up
+       :reagent-render
+       &amp;#40;fn &amp;#91;parent-atom {:keys &amp;#91;id text&amp;#93; :as todo} update-me! delete-me!&amp;#93;
+         &amp;#40;if &amp;#40;:editing @local-state-cursor&amp;#41;
+           &amp;#91;:li
+            &amp;#91;:span &amp;quot;type in some awesome text :&amp;quot;&amp;#93;
+            &amp;#91;:input {:type &amp;quot;text&amp;quot; :value text :on-change #&amp;#40;update-me! &amp;#40;assoc todo :text &amp;#40;-&amp;gt; % .-target .-value&amp;#41;&amp;#41;&amp;#41;}&amp;#93;
+            &amp;#91;:button {:on-click #&amp;#40;swap! local-state-cursor assoc :editing false&amp;#41;} &amp;quot;Done&amp;quot;&amp;#93;&amp;#93;
+           &amp;#91;:li
+            &amp;#91;:span &amp;quot;text: &amp;quot; text&amp;#93;
+            &amp;#91;:button {:on-click #&amp;#40;swap! local-state-cursor assoc :editing true&amp;#41;} &amp;quot;Edit&amp;quot;&amp;#93;
+            &amp;#91;:button {:on-click #&amp;#40;delete-me! todo&amp;#41;} &amp;quot;Remove&amp;quot;&amp;#93;&amp;#93;&amp;#41;
+         &amp;#41;}&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;We have now full visibility of the whole state of our app, and can manipulate all of it using the REPL. This is a big improvement.&lt;/p&gt;&lt;p&gt;However, we haven't achieved reloadability yet. Let's see how it goes.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;making&amp;#95;it&amp;#95;reloadable&quot;&gt;&lt;/a&gt;Making it reloadable&lt;/h3&gt;&lt;p&gt;This is kind of tricky.&lt;/p&gt;&lt;p&gt;In order to reload the code, our app has to be re-mounted into the DOM on each code reload. I'm using the &lt;a href='https://github.com/bhauman/figwheel-template'&gt;figwheel Leiningen template&lt;/a&gt;, which does it by calling a &lt;code&gt;mount-root&lt;/code&gt; function on each reload :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn mount-root &amp;#91;&amp;#93;
+  &amp;#40;r/render &amp;#91;&amp;lt;todos-list&amp;gt;&amp;#93; &amp;#40;.getElementById js/document &amp;quot;app&amp;quot;&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The problem is, each time a new version gets mounted, the old version gets unmounted. As a consequence, the &lt;code&gt;:component-will-unmount&lt;/code&gt; function we defined above is called, and diligently erases our local state.&lt;/p&gt;&lt;p&gt;We need to find a way of informing our component that the unmounting is caused by a Figwheel reload, so that it does not erase its state. This is made harder by the fact that mounting happens asynchronously.&lt;/p&gt;&lt;p&gt;The best way I've found is to set up a flag when the reloading happens, and leave it up long enough that the DOM can mount :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defonce reloading-state &amp;#40;atom false&amp;#41;&amp;#41; ;; note that we're using a regular atom: the whole point is not to interfere with Reagent here.
+
+&amp;#40;defn reload! &amp;#91;timeout&amp;#93;
+  &amp;#40;when timeout
+    &amp;#40;reset! reloading-state true&amp;#41;
+    &amp;#40;js/setTimeout #&amp;#40;reset! reloading-state false&amp;#41; timeout&amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;defn reloading? &amp;#91;&amp;#93; @reloading-state&amp;#41;
+
+;; ...
+
+&amp;#40;defn mount-root &amp;#91;&amp;#93;
+  &amp;#40;reload! 200&amp;#41;
+  &amp;#40;r/render &amp;#91;&amp;lt;todos-list&amp;gt;&amp;#93; &amp;#40;.getElementById js/document &amp;quot;app&amp;quot;&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Now we can use this by making a tiny change to our component definition :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn &amp;lt;todo-item&amp;gt; &amp;#91;parent-atom {:keys &amp;#91;id&amp;#93;} update-me! delete-me!&amp;#93;
+       ;; ...
+       :component-will-unmount &amp;#40;fn &amp;#91;&amp;#95;&amp;#93; &amp;#40;when-not &amp;#40;reloading?&amp;#41;
+                                         &amp;#40;swap! parent-atom dissoc id&amp;#41;&amp;#41;&amp;#41;
+        ;; ...
+       &amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;To be honest, I'm not very proud of it, but it works; and given that it only affects our development environment, I don't feel too worried using this little hack.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;making&amp;#95;it&amp;#95;less&amp;#95;tedious:&amp;#95;pluggable&amp;#95;components&quot;&gt;&lt;/a&gt;Making it less tedious: pluggable components&lt;/h3&gt;&lt;p&gt;This is great, but it's a pity that we have to resort to lifecycle methods and explicit calls to our &lt;code&gt;&amp;#40;reloading?&amp;#41;&lt;/code&gt; hack every time we want a component with local state, especially since we're using Reagent, which usually excels as hiding away this sort of things.&lt;/p&gt;&lt;p&gt;Fortunately, we can make it more practical. A few weeks ago, I experimented with the concept of so-called (by me) &lt;a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc'&gt;&amp;#42;pluggable components&amp;#42;&lt;/a&gt;,  which are a way of writing stateful components which have a cleanup phase without writing the same 'lifecyle methods recipes' over and over again.&lt;/p&gt;&lt;p&gt;I won't detail how it works here (although there's &lt;a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc/blob/master/src/cljs/reagent&amp;#95;plug/core.cljs#L13'&gt;not much&lt;/a&gt; to it), but basically here's the amount of work it takes :&lt;/p&gt;&lt;p&gt;We first define a 'managed cursor' recipe, which encapsulates the 'local cursor lifecycle' logic we coded above :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defmethod make-plug ::r/managed-cursor &amp;#91;&amp;#91;&amp;#95;&amp;#93; &amp;#91;parent-ratom key&amp;#93;&amp;#93;
+  &amp;#40;let &amp;#91;curs &amp;#40;r/cursor parent-ratom &amp;#91;key&amp;#93;&amp;#41;&amp;#93;
+    &amp;#40;-&amp;gt;Plug curs #&amp;#40;do nil&amp;#41; #&amp;#40;when-not &amp;#40;reloading?&amp;#41; &amp;#40;swap! parent-ratom dissoc key&amp;#41;&amp;#41;&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;From now on, we'll be able to reuse this recipe for any stateful component. Let's see how that goes for &lt;code&gt;&amp;lt;todo-item&amp;gt;&lt;/code&gt; :&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn &amp;lt;todos-list&amp;gt; &amp;#91;&amp;#93;
+      ;; ...
+      &amp;#40;for &amp;#91;todo &amp;#40;:todos @todo-state-atom&amp;#41;&amp;#93;
+        ;; the external API for the component is a tiny bit different
+        &amp;#94;{:key &amp;#40;:id todo&amp;#41;} &amp;#91;&amp;lt;todo-item&amp;gt; &amp;#91;todos-state-cursor &amp;#40;:id todo&amp;#41;&amp;#93; todo update-me! delete-me!&amp;#93;
+        &amp;#41;&amp;#93;
+      ;; ...
+     &amp;#41;
+
+
+&amp;#40;defplugged &amp;lt;todo-item&amp;gt;
+  &amp;#91;&amp;#40;local-state-cursor &amp;#91;::r/managed-cursor&amp;#93;&amp;#41; ;; `local-state-cursor` gets injected into our component, and will be cleaned up once unmounted
+   {:keys &amp;#91;id&amp;#93;} update-me! delete-me!&amp;#93;
+  &amp;#40;when-not @local-state-cursor
+    &amp;#40;reset! local-state-cursor {:editing false}&amp;#41;&amp;#41;
+  &amp;#40;fn &amp;#91;&amp;#95; {:keys &amp;#91;id text&amp;#93; :as todo} update-me! delete-me!&amp;#93;
+    &amp;#40;if &amp;#40;:editing @local-state-cursor&amp;#41;
+      &amp;#91;:li
+       &amp;#91;:span &amp;quot;type in some text : &amp;quot;&amp;#93;
+       &amp;#91;:input.form-control {:type &amp;quot;text&amp;quot; :value text :style {:width &amp;quot;100px&amp;quot; :display &amp;quot;inline-block&amp;quot;}
+                             :on-change #&amp;#40;update-me! &amp;#40;assoc todo :text &amp;#40;-&amp;gt; % .-target .-value&amp;#41;&amp;#41;&amp;#41;}&amp;#93;
+       &amp;quot; &amp;quot;
+       &amp;#91;:button.btn.btn-success {:on-click #&amp;#40;swap! local-state-cursor assoc :editing false&amp;#41;} &amp;quot;Done&amp;quot;&amp;#93;&amp;#93;
+      &amp;#91;:li
+       &amp;#91;:span &amp;quot;text: &amp;quot; text &amp;quot; &amp;quot;&amp;#93;
+       &amp;#91;:button.btn.btn-primary {:on-click #&amp;#40;swap! local-state-cursor assoc :editing true&amp;#41;} &amp;quot;Edit&amp;quot;&amp;#93; &amp;quot; &amp;quot;
+       &amp;#91;:button.btn.btn-danger {:on-click #&amp;#40;delete-me! todo&amp;#41;} &amp;quot;Remove&amp;quot;&amp;#93;&amp;#93;&amp;#41;
+    &amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;It's now as lightweight as we'd expect of Reagent!&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;wrapping&amp;#95;up&quot;&gt;&lt;/a&gt;Wrapping up&lt;/h2&gt;&lt;p&gt;I'm very excited about the possibilities of this. We can now have state that feels local, while being reachable and reloadable, with the huge benefits that come with it. Of course, this concept still has to be proven, and this implementation may be suboptimal.&lt;/p&gt;&lt;p&gt;We're getting &lt;a href='https://www.youtube.com/watch?v=PUv66718DII'&gt;there&lt;/a&gt;!&lt;/p&gt;
+</description>
+<pubDate>
+Wed, 16 Sep 2015 00:00:00 +0200
+</pubDate>
+</item>
 <item>
 <guid>
 http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
@@ -128,91 +285,6 @@ Having a good terminal console on OS X in 2015
 </description>
 <pubDate>
 Sun, 06 Sep 2015 00:00:00 +0200
-</pubDate>
-</item>
-<item>
-<guid>
-http://blogawesome.com/posts/2014-12-11-docs.html
-</guid>
-<link>
-http://blogawesome.com/posts/2014-12-11-docs.html
-</link>
-<title>
-Using Cryogen
-</title>
-<description>
-&lt;p&gt;For additional documentation please see the &lt;a href='http://cryogenweb.org'&gt;cryogen site&lt;/a&gt;&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;features&quot;&gt;&lt;/a&gt;Features&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;blog posts and pages with Markdown (default) or AsciiDoc&lt;/li&gt;&lt;li&gt;tags&lt;/li&gt;&lt;li&gt;table of contents generation&lt;/li&gt;&lt;li&gt;Default Twitter Bootstrap theme&lt;/li&gt;&lt;li&gt;plain HTML page templates&lt;/li&gt;&lt;li&gt;code syntax highlighting&lt;/li&gt;&lt;li&gt;Disqus support&lt;/li&gt;&lt;li&gt;GitHub Gist integration&lt;/li&gt;&lt;li&gt;sitemap&lt;/li&gt;&lt;li&gt;Sass/SCSS compilation&lt;/li&gt;&lt;li&gt;RSS&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;&lt;!--more--&gt;&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;prerequisites&quot;&gt;&lt;/a&gt;Prerequisites&lt;/h2&gt;&lt;p&gt;You will need &lt;a href='https://github.com/technomancy/leiningen'&gt;Leiningen&lt;/a&gt; 2.5.0 or above installed.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;usage&quot;&gt;&lt;/a&gt;Usage&lt;/h2&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;a&amp;#95;new&amp;#95;site&quot;&gt;&lt;/a&gt;Creating a New Site&lt;/h3&gt;&lt;p&gt;A new site can be created using the Cryogen template as follows:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;lein new cryogen my-blog
-&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;running&amp;#95;the&amp;#95;server&quot;&gt;&lt;/a&gt;Running the Server&lt;/h3&gt;&lt;p&gt;The web server can be started from the &lt;code&gt;my-blog&lt;/code&gt; directory using the &lt;code&gt;lein-ring&lt;/code&gt; plugin:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;lein ring server
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The server will watch for changes in the &lt;code&gt;resources/templates&lt;/code&gt; folder and recompile the content automatically.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;site&amp;#95;configuration&quot;&gt;&lt;/a&gt;Site Configuration&lt;/h3&gt;&lt;p&gt;The site configuration file is found at &lt;code&gt;templates/config.edn&lt;/code&gt;, this file looks as follows:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;{:site-title       &amp;quot;My Awesome Blog&amp;quot;
- :author           &amp;quot;Bob Bobbert&amp;quot;
- :description      &amp;quot;This blog is awesome&amp;quot;
- :site-url         &amp;quot;http://blogawesome.com/&amp;quot;
- :post-root        &amp;quot;posts&amp;quot;
- :tag-root         &amp;quot;tags&amp;quot;
- :page-root        &amp;quot;pages&amp;quot;
- :blog-prefix      &amp;quot;/blog&amp;quot;
- :rss-name         &amp;quot;feed.xml&amp;quot;
- :rss-filters      &amp;#91;&amp;quot;cryogen&amp;quot;&amp;#93;
- :recent-posts     3
- :post-date-format &amp;quot;yyyy-MM-dd&amp;quot;
- :sass-src         nil
- :sass-dest        nil
- :resources        &amp;#91;&amp;quot;css&amp;quot; &amp;quot;js&amp;quot; &amp;quot;404.html&amp;quot;&amp;#93;
- :keep-files       &amp;#91;&amp;quot;.git&amp;quot;&amp;#93;
- :disqus?          false
- :disqus-shortname &amp;quot;&amp;quot;
- :ignored-files    &amp;#91;#&amp;quot;\.#.&amp;#42;&amp;quot; #&amp;quot;.&amp;#42;\.swp$&amp;quot;&amp;#93;}
-&lt;/code&gt;&lt;/pre&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;post-root&lt;/code&gt; - value prepended to all post uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;tag-root&lt;/code&gt; - value prepended to all tag uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;page-root&lt;/code&gt; - value prepended to all page uri's&lt;/li&gt;&lt;li&gt;&lt;code&gt;blog-prefix&lt;/code&gt; - prepended to all uri's (must start with slash), nil by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;rss-name&lt;/code&gt; - name of the rss file generated, nil defaults to &lt;code&gt;rss.xml&lt;/code&gt;&lt;/li&gt;&lt;li&gt;&lt;code&gt;rss-filters&lt;/code&gt; - used to generate tag-based rss feeds for topic-specific rss aggregators. Tags listed here should match tags being used in your posts.&lt;/li&gt;&lt;li&gt;&lt;code&gt;recent-posts&lt;/code&gt; - number of recent posts to display in the sidebar&lt;/li&gt;&lt;li&gt;&lt;code&gt;post-date-format&lt;/code&gt; - date format for your .md or .asc files, yyyy-MM-dd by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;sass-src&lt;/code&gt; - directory containing sources of sass files to be  compiled - defaults to &quot;css&quot; - be sure to include this directory in  your &lt;code&gt;resources&lt;/code&gt; section&lt;/li&gt;&lt;li&gt;&lt;code&gt;sass-dest&lt;/code&gt; - directory where the compiled output CSS would be put    into. defaults to &quot;css&quot; - be sure to include this directory in    your &lt;code&gt;resources&lt;/code&gt; section&lt;/li&gt;&lt;li&gt;&lt;code&gt;resources&lt;/code&gt; - list of folders or files to be copied over from &lt;code&gt;templates&lt;/code&gt; to &lt;code&gt;public&lt;/code&gt;&lt;/li&gt;&lt;li&gt;&lt;code&gt;keep-files&lt;/code&gt; - list of folders or files that are not wiped in the &lt;code&gt;public&lt;/code&gt; directory. For example, this allows to keep a &lt;code&gt;.git&lt;/code&gt; directory there across recompiles of the site to versionize the generated files&lt;/li&gt;&lt;li&gt;&lt;code&gt;disqus?&lt;/code&gt; - set to true if you want disqus enabled on your site&lt;/li&gt;&lt;li&gt;&lt;code&gt;disqus-shortname&lt;/code&gt; - your disqus shortname&lt;/li&gt;&lt;li&gt;&lt;code&gt;ignored-files&lt;/code&gt; - list of regexps matching files the compiler should ignore&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;&lt;a name=&quot;switching&amp;#95;between&amp;#95;markdown&amp;#95;and&amp;#95;asciidoc&quot;&gt;&lt;/a&gt;Switching between Markdown and AsciiDoc&lt;/h3&gt;&lt;p&gt;Cryogen comes with Markdown support as default. If you want to use AsciiDoc instead, open the &lt;code&gt;project.clj&lt;/code&gt; in your created blog (e.g. &lt;code&gt;my-blog&lt;/code&gt;), and change the line in &lt;code&gt;:dependencies&lt;/code&gt; that says &lt;code&gt;cryogen-markdown&lt;/code&gt; to &lt;code&gt;cryogen-asciidoc&lt;/code&gt;. Instead of looking for files ending in &lt;code&gt;.md&lt;/code&gt; in the &lt;code&gt;md&lt;/code&gt; directory, the compiler will now look for files ending in &lt;code&gt;.asc&lt;/code&gt; in the &lt;code&gt;asc&lt;/code&gt; directory.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;posts&quot;&gt;&lt;/a&gt;Creating Posts&lt;/h3&gt;&lt;p&gt;The posts are located in the &lt;code&gt;resources/templates/md/posts&lt;/code&gt; for Markdown files or &lt;code&gt;resources/templates/asc/posts&lt;/code&gt; for AsciiDoc files. Posts are written using Markdown or AsciiDoc and each post file should start with the date in the format of &lt;code&gt;yyyy-dd-MM&lt;/code&gt; or what is defined in the &lt;code&gt;:post-date-format&lt;/code&gt; key of &lt;code&gt;config.edn&lt;/code&gt;. The files have to have the extension &lt;code&gt;.md&lt;/code&gt; or &lt;code&gt;.asc&lt;/code&gt; respectively. The compiler will link the posts in order for you using the dates. A valid post file written in Markdown might look as follows:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;2014-19-12-post1.md
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The post content must start with a map containing the post metadata:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;{:title &amp;quot;First Post!&amp;quot;
- :layout :post
- :tags  &amp;#91;&amp;quot;tag1&amp;quot; &amp;quot;tag3&amp;quot;&amp;#93;}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The metadata contains the following keys:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;:title&lt;/code&gt; - the title of the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:author&lt;/code&gt; - optional key to display the name of the author for the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:layout&lt;/code&gt; - the layout template to use for the post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:tags&lt;/code&gt; - the tags associated with this post&lt;/li&gt;&lt;li&gt;&lt;code&gt;:toc&lt;/code&gt; - boolean indicating whether table of contents should be generated, defaults to false&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;The rest of the post should consist of valid Markdown content, eg:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;## Hello World
-
-This is my first post!
-
-check out this sweet code
-
-    &amp;#40;defn foo &amp;#91;bar&amp;#93;
-      &amp;#40;bar&amp;#41;&amp;#41;
-
-Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-Nunc sodales pharetra massa, eget fringilla ex ornare et.
-Nunc mattis diam ac urna finibus sodales. Etiam sed ipsum
-et purus commodo bibendum. Cras libero magna, fringilla
-tristique quam sagittis, volutpat auctor mi. Aliquam luctus,
-nulla et vestibulum finibus, nibh justo semper tortor, nec
-vestibulum tortor est nec nisi.
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;If you wish to enable comments on your posts, create a &lt;a href='https://disqus.com/'&gt;disqus&lt;/a&gt; account and &lt;a href='https://disqus.com/admin/create/'&gt;register&lt;/a&gt; your blog. &lt;code&gt;disqus?&lt;/code&gt; should be set to &lt;code&gt;true&lt;/code&gt; in the config and you must add your &lt;code&gt;disqus-shortname&lt;/code&gt;.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;pages&quot;&gt;&lt;/a&gt;Creating Pages&lt;/h3&gt;&lt;p&gt;Pages work similarly to posts, but aren't grouped by date. An example page might be an about page.&lt;/p&gt;&lt;p&gt;The pages contain the following metadata:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;code&gt;:title&lt;/code&gt; - the title of the page&lt;/li&gt;&lt;li&gt;&lt;code&gt;:layout&lt;/code&gt; - the layout template for the page&lt;/li&gt;&lt;li&gt;&lt;code&gt;:page-index&lt;/code&gt; - a number representing the order of the page in the navbar/sidebar&lt;/li&gt;&lt;li&gt;&lt;code&gt;:navbar?&lt;/code&gt; - determines whether the page should be shown in the navbar, &lt;code&gt;false&lt;/code&gt; by default&lt;/li&gt;&lt;li&gt;&lt;code&gt;:toc&lt;/code&gt; - boolean indicating whether table of contents should be generated, defaults to false&lt;/li&gt;&lt;/ul&gt;&lt;h3&gt;&lt;a name=&quot;customizing&amp;#95;layouts&quot;&gt;&lt;/a&gt;Customizing Layouts&lt;/h3&gt;&lt;p&gt;Cryogen uses &lt;a href='https://github.com/yogthos/Selmer'&gt;Selmer&lt;/a&gt; templating engine for layouts. Please refer to its documentation to see the supported tags and filters for the layouts.&lt;/p&gt;&lt;p&gt;The layouts are contained in the &lt;code&gt;resources/templates/html/layouts&lt;/code&gt; folder of the project. By default, the &lt;code&gt;base.html&lt;/code&gt; layout is used to provide the general layout for the site. This is where you would add static resources such as CSS and Js assets as well as define headers and footers for your site.&lt;/p&gt;&lt;p&gt;Each page layout should have a name that matches the &lt;code&gt;:layout&lt;/code&gt; key in the page metadata and end with &lt;code&gt;.html&lt;/code&gt;. Page layouts extend the base layout and should only contain the content relaveant to the page inside the &lt;code&gt;content&lt;/code&gt; block. For example, the &lt;code&gt;tag&lt;/code&gt; layout is located in &lt;code&gt;tag.html&lt;/code&gt; and looks as follows:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;xml&quot;&gt;{% extends &amp;quot;templates/html/layouts/base.html&amp;quot; %}
-{% block content %}
-&amp;lt;div id=&amp;quot;posts-by-tag&amp;quot;&amp;gt;
-    &amp;lt;h2&amp;gt;Posts tagged {{name}}&amp;lt;/h2&amp;gt;
-    &amp;lt;ul&amp;gt;
-    {% for post in posts %}
-        &amp;lt;li&amp;gt;
-            &amp;lt;a href=&amp;quot;{{post.uri}}&amp;quot;&amp;gt;{{post.title}}&amp;lt;/a&amp;gt;
-        &amp;lt;/li&amp;gt;
-    {% endfor %}
-    &amp;lt;/ul&amp;gt;
-&amp;lt;/div&amp;gt;
-{% endblock %}
-&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;code&amp;#95;syntax&amp;#95;highlighting&quot;&gt;&lt;/a&gt;Code Syntax Highlighting&lt;/h3&gt;&lt;p&gt;Cryogen uses &lt;a href='https://highlightjs.org/'&gt;Highlight.js&lt;/a&gt; for code syntax highlighting. You can add more languages by replacing &lt;code&gt;templates/js/highlight.pack.js&lt;/code&gt; with a customized package from &lt;a href='https://highlightjs.org/download/'&gt;here&lt;/a&gt;.&lt;/p&gt;&lt;p&gt;The &lt;code&gt; initHighlightingOnLoad&lt;/code&gt; function is called in &lt;code&gt;templates/html/layouts/base.html&lt;/code&gt;.&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;xml&quot;&gt;&amp;lt;script&amp;gt;hljs.initHighlightingOnLoad&amp;#40;&amp;#41;;&amp;lt;/script&amp;gt;
-&lt;/code&gt;&lt;/pre&gt;&lt;h2&gt;&lt;a name=&quot;deploying&amp;#95;your&amp;#95;site&quot;&gt;&lt;/a&gt;Deploying Your Site&lt;/h2&gt;&lt;p&gt;The generated static content will be found under the &lt;code&gt;resources/public&lt;/code&gt; folder. Simply copy the content to a static folder for a server sugh as Nginx or Apache and your site is now ready for service.&lt;/p&gt;&lt;p&gt;A sample Nginx configuration that's placed in &lt;code&gt;/etc/nginx/sites-available/default&lt;/code&gt; can be seen below:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;javascript&quot;&gt;server{
-  listen 80 default&amp;#95;server;
-  listen &amp;#91;::&amp;#93;:80 default&amp;#95;server ipv6only=on;
-  server&amp;#95;name localhost &amp;lt;yoursite.com&amp;gt; &amp;lt;www.yoursite.com&amp;gt;;
-
-  access&amp;#95;log /var/log/blog&amp;#95;access.log;
-  error&amp;#95;log /var/log/blog&amp;#95;error.log;
-
-  location / {
-    alias /var/blog/;
-    error&amp;#95;page    404 = /404.html;
-  }
-}
-&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Simply set &lt;code&gt;yoursite.com&lt;/code&gt; to the domain of your site in the above configuration and ensure the static content is available at &lt;code&gt;/var/blog/&lt;/code&gt;. Finally, place your custom error page in the &lt;code&gt;/var/blog/404.html&lt;/code&gt; file.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;some&amp;#95;sites&amp;#95;made&amp;#95;with&amp;#95;cryogen&quot;&gt;&lt;/a&gt;Some Sites Made With Cryogen&lt;/h2&gt;&lt;ul&gt;&lt;li&gt;&lt;a href='http://carmenla.me/blog/index.html'&gt;My personal blog&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://cryogenweb.org'&gt;Cryogen Documentation Site&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://yogthos.net/'&gt;Yogthos blog&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://www.clojure.tn'&gt;Clojure :in Tunisia&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://dl1ely.github.io'&gt;dl1ely.github.io&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://jonase.github.io/nil-recur'&gt;nil/recur&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://tangrammer.github.io/'&gt;on the clojure move&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='http://blog.jethrokuan.com/'&gt;cognizance&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;
-</description>
-<pubDate>
-Thu, 11 Dec 2014 00:00:00 +0100
 </pubDate>
 </item>
 </channel>
