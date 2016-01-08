@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Application architecture with Datomic: branching reality</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='http://fonts.googleapis.com/css?family=Alegreya:400italic,700italic,400,700' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="../css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">January 3, 2016</div>
+        
+    </div>
+    <h2>Application architecture with Datomic: branching reality</h2>
+</div>
+<div>
+    <ol class="contents"><li><a href="#universes">Universes</a></li><li><a href="#lemma:_mocking_datomic_connections">Lemma: mocking Datomic connections</a></li><li><a href="#forking_universes">Forking universes</a></li><li><a href="#about_mutability">About mutability</a></li><li><a href="#practical_usage">Practical usage</a></li><li><a href="#parting_thoughts">Parting thoughts</a></li></ol>
+    <p>In this post, I'll present an architectural pattern for structuring Clojure and Datomic apps, playing a similar role  as Dependency Injection in the Object-Oriented world.</p><p>The big picture is that your application logic manipulates <em>universes</em>, which are mutable programmatic values with a <code>fork</code> operation, which essentially makes 2 diverging universes out of one. This 'fork' abstraction is made possible using one of Datomic's special powers: speculative writes.</p><p>I've found this approach to make system-level tests very straightforward to write, and to play nicely with interactive development. Read on for more details.</p><h2><a name="universes"></a>Universes</h2><p>Any but the most trivial application needs some way to separate configuration from use. Some examples:</p><ul><li>if your application is backed by a database, you'll want your application code to use a connection to your test database in a test environment,and a connection to your production database in a production environment.</li><li>if your application needs to send emails, for instance using a web service like Mandrill, you'll want to use a test Mandrill token  during development and tests, and a real Mandrill token in production.</li></ul><p>These requirements are well-known, and have been traditionally addressed in class-based languages like Java using 'Inversion of Control Patterns' like <em>Dependency Injection</em> and <em>Service Locator</em>.</p><p>In Clojure, there are no classes, so it's tempting to simply use global Vars to store configuration:</p><pre><code class="clojure">&#40;require '&#91;datomic.api :as d&#93;&#41;
+
+;; configuration
+&#40;def conn &quot;the Datomic connection&quot;
+  &#40;d/connect &#40;System/getProperty &quot;DATOMIC&#95;URI&quot;&#41;&#41;&#41;
+
+&#40;def mandrill-token &quot;the token for authenticating to the Mandrill API&quot;
+  &#40;System/getProperty &quot;MANDRILL&#95;TOKEN&quot;&#41;&#41;
+
+
+;; business logic
+&#40;defn some-business-logic &#91;x y&#93;
+  &#40;d/transact conn &#40;make-some-transaction-using x :and y ...&#41;&#41;
+  &#40;send-mandrill-email! mandrill-token &#40;make-some-email-with x :and y ...&#41;&#41;&#41;
+</code></pre><p>Please, never do this. This is global state and environment coupling at the same time. It will make your tests harder to write, ruin your REPL experience, and complect the lifecycle of your application with the loading of its code. Bad, bad, bad.</p><p>Another tempting idea is to use dynamic Vars, one of Clojure's special features, to mitigate the above-mentioned issues:</p><pre><code class="clojure">&#40;require '&#91;datomic.api :as d&#93;&#41;
+
+;; configuration
+&#40;def &#94;:dynamic conn &quot;the Datomic connection&quot; nil&#41;
+
+&#40;def &#94;:dynamic mandrill-token &quot;the token for authenticating to the Mandrill API&quot; nil&#41;
+
+
+;; business logic
+&#40;defn some-business-logic &#91;x y&#93;
+  &#40;d/transact conn &#40;make-some-transaction-using x :and y ...&#41;&#41;
+  &#40;send-mandrill-email! mandrill-token &#40;make-some-email-with x :and y ...&#41;&#41;&#41;
+
+;; starting the application
+&#40;defn start-app! &#91;&#93;
+  &#40;binding &#91;conn &#40;d/connect &#40;System/getProperty &quot;DATOMIC&#95;URI&quot;&#41;&#41;
+            mandrill-token &#40;System/getProperty &quot;MANDRILL&#95;TOKEN&quot;&#41;&#93;
+    ...&#41;&#41;
+
+</code></pre><p>I don't recommend this either. This is still environment coupling, even if you have an easier way to control the environment. You may also find yourself typing thse annoying <code>&#40;binding ...&#41;</code> clauses all the time in the REPL, which kind of defeats the purpose of using Vars.</p><p>It is now an <a href='reference to components'>established best practice</a> in the Clojure community to pass the configuration as additional arguments to your business logic functions,  making them self-contained. For example, you can pass the configuration values as a map</p><pre><code class="clojure">&#40;defn some-business-logic &#91;{:keys &#91;conn mandrill-token&#93;} x y&#93;
+  &#40;d/transact conn &#40;make-some-transaction-using x :and y ...&#41;&#41;
+  &#40;send-mandrill-email! mandrill-token &#40;make-some-email-with x :and y ...&#41;&#41;&#41;
+</code></pre><p>Where does the configuration map come from? It depends on your application. For instance, if your application is an HTTP server with a Ring adapter, the <code>-main</code> function could create the configuration map from  environment properties at startup, then listen to the HTTP port and 'attach' the configuration map to each incoming request.</p><p>This 'configuration map' could also be called a 'context' or 'environment', but I want to call it a <em>universe</em>, for reasons which will become more obvious later.</p><p>What makes a universe? Here are some examples of what you might put in this configuration map:<ul><li>database connections</li><li>API tokens and other configuration constants</li><li>application services as protocol implementations (so that you may mock them), e.g Ring session-stores</li><li>if you're using Datomic, the current database value</li><li>the present time (never use <code>&#40;new java.util.Date&#41;</code>, that's environment coupling too!)</li></ul>The mental model is that your application logic is made of stateless, configuration-free, timeless components which manipulate the universe (<em>any universe</em>) in response to events.In contrast, with Dependency Injection, I would say that your application components are created inside and configured by a universe.</p><p>In testing, universes will tend to be made out of test database connections and mocked services. After all, that's the idea behind making mocks for testing: fabricating a small, isolated universe in which we can mess around without affecting the <em>real</em> universe, the one our business cares about.</p><p>Hold that thought. We'll make a small detour in Datomic Land to get some reality-branching superpowers, then come back to universes,  at which point things will get more interesting.</p><h2><a name="lemma:&#95;mocking&#95;datomic&#95;connections"></a>Lemma: mocking Datomic connections</h2><p>Datomic supports <em>speculative writes</em>, in the form of its <code>datomic.api/with</code> function. Roughly speaking, <code>with</code> accepts a database value and a write specification, and returns an updated database value <em>as if</em> you had sent a transaction to the connection.</p><p>Therefore, it's useful to answer "what if" questions. But we can go further and abuse <code>with</code> to mock Datomic connections in-memory. Here is a complete implementation, which is essentially an Atom holding database values, which uses <code>with</code> for writes (gist here):</p><pre><code class="clojure">&#40;import 'datomic.Connection&#41;
+&#40;import '&#40;java.util.concurrent BlockingQueue LinkedBlockingDeque&#41;&#41;
+&#40;require 'datomic.promise&#41;
+&#40;require '&#91;datomic.api :as d&#93;&#41;
+
+&#40;defrecord MockConnection
+  &#91;dbAtom, &#94;BlockingQueue txQueue&#93;
+
+  Connection
+  &#40;db &#91;this&#93; @dbAtom&#41;
+  &#40;transact &#91;this tx-data&#93; &#40;doto &#40;datomic.promise/settable-future&#41;
+                             &#40;deliver &#40;let &#91;tx-res
+                                            &#40;loop &#91;&#93;
+                                              &#40;let &#91;old-val @dbAtom
+                                                    tx-res &#40;d/with old-val tx-data&#41;
+                                                    new-val &#40;:db-after tx-res&#41;&#93;
+                                                &#40;if &#40;compare-and-set! dbAtom old-val new-val&#41;
+                                                  tx-res
+                                                  &#40;recur&#41;&#41;
+                                                &#41;&#41;&#93;
+                                        &#40;.add &#94;BlockingQueue txQueue tx-res&#41;
+                                        tx-res&#41;&#41;
+                             &#41;&#41;
+  &#40;transactAsync &#91;this tx-data&#93; &#40;.transact this tx-data&#41;&#41;
+
+  &#40;gcStorage &#91;this olderThan&#93;&#41;
+  &#40;requestIndex &#91;this&#93;&#41;
+  &#40;release &#91;this&#93;&#41;
+  &#40;sync &#91;this&#93; &#40;doto &#40;datomic.promise/settable-future&#41;
+                 &#40;deliver &#40;.db this&#41;&#41;&#41;&#41;
+  &#40;syncExcise &#91;this t&#93; &#40;.sync this&#41;&#41;
+  &#40;syncIndex &#91;this t&#93; &#40;.sync this&#41;&#41;
+  &#40;syncSchema &#91;this t&#93; &#40;.sync this&#41;&#41;
+  &#40;sync &#91;this t&#93; &#40;.sync this&#41;&#41;
+  &#40;txReportQueue &#91;this&#93; &#40;.txQueue this&#41;&#41;
+
+  &#41;
+
+&#40;defn &#94;Connection mock-conn
+  &quot;Creates a mocked version of datomic.Connection which uses db/with internally.
+  Only supports datomic.api/db, datomic.api/transact and datomic.api/transact-async operations.
+  Sync and housekeeping methods are implemented as noops. #log&#40;&#41; is not supported.&quot;
+  &#91;db&#93;
+  &#40;MockConnection. &#40;atom db&#41; &#40;LinkedBlockingDeque.&#41;&#41;&#41;
+</code></pre><p>You may be wondering, how is this different than using Datomic's built-in in-memory connections ? (as in <code>&#40;d/connect &quot;datomic:mem://my-db-name&quot;&#41;&#41;</code>) Well, Datomic's in-memory connections start with a blank database, whereas in the above implementation the user provides a <em>starting-point database</em>. This starting point might be a database loaded with fixture data; it might also be your current production database!</p><p>In particular, you can use these mock connections to make a local 'fork' of any Datomic connection:</p><pre><code class="clojure">&#40;defn &#94;Connection fork-conn
+  &quot;Creates a local fork of the given Datomic connection.
+  Writes to the forked connection will not affect the original;
+  conversely, writes to the original connection will not affect the forked one.&quot;
+  &#91;conn&#93;
+  &#40;mock-conn &#40;d/db conn&#41;&#41;&#41;
+</code></pre><p><strong>Analogy to Git:</strong> This is the same notion of forking as in Git, where database values are like commits, and connections are like branches.  (However, unlike Git, there is no 'merge' operation).</p><h2><a name="forking&#95;universes"></a>Forking universes</h2><p>This notion of forking is interesting, and applicable to other objects than Datomic connections. For example, immutable data structures and simple mutable interfaces (e.g HTTP session stores) can be forked too.</p><p>Which brings us to the main point: if the universes of your application have Datomic as their main data store, then you can <em>fork</em> these universes.</p><p><em>Forking</em> a universe is making a local 'copy' of a universal which behaves exactly as the original one, in which you can mess around without affecting the original one.</p><p>This is of tremendous value for system-level testing. Because of functional programming, Clojure already has a great story for testing <em>in the small</em>, but in the large, your system is essentially a process which performs in-place updates in response to events. Forkable connections are a nice fit for this model. Forget about your setup and teardown phases: instead, you have a <em>starting point</em> universe,  and for each of your tests which involves writes, you simply fork off another universe, perform your tests, and forget about it when you're done.  Garbage collection will do the cleaning up for you.</p><p>For instance, imagine you have an e-commerce website, and you want to test the purchase flow. The purchase flow consists of the user signing up, verifying her account, adding items to the cart, and checking out. Typically, the test will consist of one ideal scenario, and several scenarios where things go wrong, like the cart expiring or the user logging out before checking out. You can easily test this by branching off several universes matching different scenarios as you progress along the user path:</p><p><img src="/img/funnel-purchase.png" width="100%"></p><p>The code for testing this may look like the following:</p><pre><code class="clojure">&#40;let &#91;u &#40;fork starting-point-universe&#41;&#93;
+  &#40;create-account! u&#41;
+
+  &#40;let &#91;u &#40;fork u&#41;&#93;
+    &#40;expect-to-fail
+      &#40;add-items-to-cart! u some-items-data&#41;&#41;&#41;
+
+  &#40;verify-account! u&#41;
+
+  &#40;let &#91;u &#40;fork u&#41;&#93;
+    &#40;expect-to-fail
+      &#40;add-items-to-cart! u sold-out-items-data&#41;&#41;&#41;
+
+  &#40;add-items-to-cart! u some-items-data&#41;
+
+  &#40;let &#91;u &#40;fork u&#41;&#93;
+    &#40;expect-to-fail
+      &#40;log-out! u&#41;
+      &#40;pay-and-check-out! u&#41;&#41;&#41;
+
+  &#40;let &#91;u &#40;assoc &#40;fork u&#41;
+            :now &#40;after-the-cart-has-expired&#41;&#41;&#93;
+    &#40;expect-to-fail
+      &#40;pay-and-check-out! u&#41;&#41;&#41;
+
+  &#40;expect-to-succeed
+    &#40;pay-and-check-out! u&#41;&#41;
+  &#41;
+</code></pre><p>Forkable universes also offer a lot of leverage of interactive development. Sometimes I want to work in my development environment with my production data, but without committing any change to my production database;  this is useful for experimenting with new features, or for demonstration purposes.  All I have to is fork my production context and run my local server on it.</p><p>I can also imagine automating the above idea to make "inspection tests", in which you would periodically simulate some scenarios on your production data.</p><p>Finally, I think forkability makes room for some REPL-friendly debugging techniques.  For example, you can insert 'checkpoints' in a code path you're debugging, which when reached will make forks of the current universe and store them.  You can then retrieve these checkpoints to inspect the past of the universe, or to replay some steps manually.</p><h2><a name="about&#95;mutability"></a>About mutability</h2><p>Universes are essentially about mutability and side-effects, which may seem at odds with the functional spirit of Clojure and Datomic. That's not the case in my opinion, since Clojure positioned itself <a href='http://www.infoq.com/presentations/Value-Identity-State-Rich-Hickey'>since the beginning</a> as supporting mutability in the few places where it is a better fit than a purely functional style.</p><p>Having said that, universes and the ability to fork them are no excuse to make a mutable imperative mess. You still want to make the building blocks of your application purely functional, on as large a scale as is reasonable.</p><h2><a name="practical&#95;usage"></a>Practical usage</h2><p>I have a test namespace with a function to create 'starting-point universe' loaded with fixture data. This function is called by tests, and by me from the REPL. Because loading the database schema and fixture data can take some time (~100ms), I back this function with a TTL cache of a few seconds. This allows me to never have a stale context as my code evolves, while not wasting time on a heavy setup phase for each test.</p><p>On top of that, I have a dev namespace with 2 functions <code>fu</code> (<em>Fresh Universe</em>) and <code>lu</code> (<em>Local Universe</em>). Both return universes with fixture data, but <code>fu</code> returns a different universe each time it is called (stateless), whereas <code>lu</code> creates a universe the first time and then returns it (session); there is an optional param to reset the universe returned by <code>lu</code>.</p><p>To achieve full universe forkability, I also had to make mock implementations of a few key-value stores in addition to Datomic, such as Ring session stores.</p><h2><a name="parting&#95;thoughts"></a>Parting thoughts</h2><p>I am constantly amazed to see how immutability, although it encourages functional programming, also makes dealing with side-effects and mutable places better. This is a lesson we have learned in the small with Clojure's STM, and now we're learning it in the large with Datomic.</p><p>At <a href='https://www.bandsquare.com'>BandSquare</a> we have applied the above ideas to our whole backend system, to great benefits so far. We will continue to explore the possibilities and limitations of forkable universes, and we welcome your feedback.</p><p>Happy New Year!</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/tags/Clojure.html">Clojure</a>
+    
+    <a href="/tags/Architecture.html">Architecture</a>
+    
+    <a href="/tags/Datomic.html">Datomic</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">A bottom-up approach to state in Reagent &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2016-01-03-architecture-datomic-branching-reality.html">Application architecture with Datomic: branching reality</a></li>
+                        
+                        <li><a href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">A bottom-up approach to state in Reagent</a></li>
+                        
+                        <li><a href="/posts/2015-09-06-productive-git-setup.html">Productive Git setup</a></li>
+                        
+                        <li><a href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Having a good terminal console on OS X in 2015</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/tags/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/tags/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/tags/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/tags/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/tags/tools.html">tools</a></li>
+                        
+                        <li><a href="/tags/tutorial.html">tutorial</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="../js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="../js/custom.js" type="text/javascript"></script>
+</body>
+</html>

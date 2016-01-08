@@ -53,6 +53,17 @@
 <div id="post">
     
     <div class="post-header">
+        <h2>Application architecture with Datomic: branching reality</h2>
+        <div id="post-meta">
+            
+            <div class="date">January 3, 2016</div>
+        </div>
+    </div>
+    <p>In this post, I'll present an architectural pattern for structuring Clojure and Datomic apps, playing a similar role  as Dependency Injection in the Object-Oriented world.</p><p>The big picture is that your application logic manipulates <em>universes</em>, which are mutable programmatic values with a <code>fork</code> operation, which essentially makes 2 diverging universes out of one. This 'fork' abstraction is made possible using one of Datomic's special powers: speculative writes.</p>
+    <a href="/posts/2016-01-03-architecture-datomic-branching-reality.html">Continue reading &#8594;</a>
+    <hr>
+    
+    <div class="post-header">
         <h2>A bottom-up approach to state in Reagent</h2>
         <div id="post-meta">
             
@@ -106,6 +117,8 @@
                     <h3>Recent Posts</h3>
                     <ul>
                         
+                        <li><a href="/posts/2016-01-03-architecture-datomic-branching-reality.html">Application architecture with Datomic: branching reality</a></li>
+                        
                         <li><a href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">A bottom-up approach to state in Reagent</a></li>
                         
                         <li><a href="/posts/2015-09-06-productive-git-setup.html">Productive Git setup</a></li>
@@ -120,11 +133,13 @@
                     <h3>Tags</h3>
                     <ul>
                         
-                        <li><a href="/tags/Reagent.html">Reagent</a></li>
-                        
                         <li><a href="/tags/Clojure.html">Clojure</a></li>
                         
                         <li><a href="/tags/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/tags/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/tags/Reagent.html">Reagent</a></li>
                         
                         <li><a href="/tags/tools.html">tools</a></li>
                         

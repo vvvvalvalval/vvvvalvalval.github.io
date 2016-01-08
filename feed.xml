@@ -12,11 +12,142 @@ http://blogawesome.com/
 This blog is awesome
 </description>
 <lastBuildDate>
-Wed, 16 Sep 2015 23:38:44 +0200
+Fri, 08 Jan 2016 10:19:20 +0100
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://blogawesome.com/posts/2016-01-03-architecture-datomic-branching-reality.html
+</guid>
+<link>
+http://blogawesome.com/posts/2016-01-03-architecture-datomic-branching-reality.html
+</link>
+<title>
+Application architecture with Datomic: branching reality
+</title>
+<description>
+&lt;p&gt;In this post, I'll present an architectural pattern for structuring Clojure and Datomic apps, playing a similar role  as Dependency Injection in the Object-Oriented world.&lt;/p&gt;&lt;p&gt;The big picture is that your application logic manipulates &lt;em&gt;universes&lt;/em&gt;, which are mutable programmatic values with a &lt;code&gt;fork&lt;/code&gt; operation, which essentially makes 2 diverging universes out of one. This 'fork' abstraction is made possible using one of Datomic's special powers: speculative writes.&lt;/p&gt;&lt;p&gt;I've found this approach to make system-level tests very straightforward to write, and to play nicely with interactive development. Read on for more details.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;universes&quot;&gt;&lt;/a&gt;Universes&lt;/h2&gt;&lt;p&gt;Any but the most trivial application needs some way to separate configuration from use. Some examples:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;if your application is backed by a database, you'll want your application code to use a connection to your test database in a test environment,and a connection to your production database in a production environment.&lt;/li&gt;&lt;li&gt;if your application needs to send emails, for instance using a web service like Mandrill, you'll want to use a test Mandrill token  during development and tests, and a real Mandrill token in production.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;These requirements are well-known, and have been traditionally addressed in class-based languages like Java using 'Inversion of Control Patterns' like &lt;em&gt;Dependency Injection&lt;/em&gt; and &lt;em&gt;Service Locator&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;In Clojure, there are no classes, so it's tempting to simply use global Vars to store configuration:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+
+;; configuration
+&amp;#40;def conn &amp;quot;the Datomic connection&amp;quot;
+  &amp;#40;d/connect &amp;#40;System/getProperty &amp;quot;DATOMIC&amp;#95;URI&amp;quot;&amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;def mandrill-token &amp;quot;the token for authenticating to the Mandrill API&amp;quot;
+  &amp;#40;System/getProperty &amp;quot;MANDRILL&amp;#95;TOKEN&amp;quot;&amp;#41;&amp;#41;
+
+
+;; business logic
+&amp;#40;defn some-business-logic &amp;#91;x y&amp;#93;
+  &amp;#40;d/transact conn &amp;#40;make-some-transaction-using x :and y ...&amp;#41;&amp;#41;
+  &amp;#40;send-mandrill-email! mandrill-token &amp;#40;make-some-email-with x :and y ...&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Please, never do this. This is global state and environment coupling at the same time. It will make your tests harder to write, ruin your REPL experience, and complect the lifecycle of your application with the loading of its code. Bad, bad, bad.&lt;/p&gt;&lt;p&gt;Another tempting idea is to use dynamic Vars, one of Clojure's special features, to mitigate the above-mentioned issues:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+
+;; configuration
+&amp;#40;def &amp;#94;:dynamic conn &amp;quot;the Datomic connection&amp;quot; nil&amp;#41;
+
+&amp;#40;def &amp;#94;:dynamic mandrill-token &amp;quot;the token for authenticating to the Mandrill API&amp;quot; nil&amp;#41;
+
+
+;; business logic
+&amp;#40;defn some-business-logic &amp;#91;x y&amp;#93;
+  &amp;#40;d/transact conn &amp;#40;make-some-transaction-using x :and y ...&amp;#41;&amp;#41;
+  &amp;#40;send-mandrill-email! mandrill-token &amp;#40;make-some-email-with x :and y ...&amp;#41;&amp;#41;&amp;#41;
+
+;; starting the application
+&amp;#40;defn start-app! &amp;#91;&amp;#93;
+  &amp;#40;binding &amp;#91;conn &amp;#40;d/connect &amp;#40;System/getProperty &amp;quot;DATOMIC&amp;#95;URI&amp;quot;&amp;#41;&amp;#41;
+            mandrill-token &amp;#40;System/getProperty &amp;quot;MANDRILL&amp;#95;TOKEN&amp;quot;&amp;#41;&amp;#93;
+    ...&amp;#41;&amp;#41;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;I don't recommend this either. This is still environment coupling, even if you have an easier way to control the environment. You may also find yourself typing thse annoying &lt;code&gt;&amp;#40;binding ...&amp;#41;&lt;/code&gt; clauses all the time in the REPL, which kind of defeats the purpose of using Vars.&lt;/p&gt;&lt;p&gt;It is now an &lt;a href='reference to components'&gt;established best practice&lt;/a&gt; in the Clojure community to pass the configuration as additional arguments to your business logic functions,  making them self-contained. For example, you can pass the configuration values as a map&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn some-business-logic &amp;#91;{:keys &amp;#91;conn mandrill-token&amp;#93;} x y&amp;#93;
+  &amp;#40;d/transact conn &amp;#40;make-some-transaction-using x :and y ...&amp;#41;&amp;#41;
+  &amp;#40;send-mandrill-email! mandrill-token &amp;#40;make-some-email-with x :and y ...&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Where does the configuration map come from? It depends on your application. For instance, if your application is an HTTP server with a Ring adapter, the &lt;code&gt;-main&lt;/code&gt; function could create the configuration map from  environment properties at startup, then listen to the HTTP port and 'attach' the configuration map to each incoming request.&lt;/p&gt;&lt;p&gt;This 'configuration map' could also be called a 'context' or 'environment', but I want to call it a &lt;em&gt;universe&lt;/em&gt;, for reasons which will become more obvious later.&lt;/p&gt;&lt;p&gt;What makes a universe? Here are some examples of what you might put in this configuration map:&lt;ul&gt;&lt;li&gt;database connections&lt;/li&gt;&lt;li&gt;API tokens and other configuration constants&lt;/li&gt;&lt;li&gt;application services as protocol implementations (so that you may mock them), e.g Ring session-stores&lt;/li&gt;&lt;li&gt;if you're using Datomic, the current database value&lt;/li&gt;&lt;li&gt;the present time (never use &lt;code&gt;&amp;#40;new java.util.Date&amp;#41;&lt;/code&gt;, that's environment coupling too!)&lt;/li&gt;&lt;/ul&gt;The mental model is that your application logic is made of stateless, configuration-free, timeless components which manipulate the universe (&lt;em&gt;any universe&lt;/em&gt;) in response to events.In contrast, with Dependency Injection, I would say that your application components are created inside and configured by a universe.&lt;/p&gt;&lt;p&gt;In testing, universes will tend to be made out of test database connections and mocked services. After all, that's the idea behind making mocks for testing: fabricating a small, isolated universe in which we can mess around without affecting the &lt;em&gt;real&lt;/em&gt; universe, the one our business cares about.&lt;/p&gt;&lt;p&gt;Hold that thought. We'll make a small detour in Datomic Land to get some reality-branching superpowers, then come back to universes,  at which point things will get more interesting.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;lemma:&amp;#95;mocking&amp;#95;datomic&amp;#95;connections&quot;&gt;&lt;/a&gt;Lemma: mocking Datomic connections&lt;/h2&gt;&lt;p&gt;Datomic supports &lt;em&gt;speculative writes&lt;/em&gt;, in the form of its &lt;code&gt;datomic.api/with&lt;/code&gt; function. Roughly speaking, &lt;code&gt;with&lt;/code&gt; accepts a database value and a write specification, and returns an updated database value &lt;em&gt;as if&lt;/em&gt; you had sent a transaction to the connection.&lt;/p&gt;&lt;p&gt;Therefore, it's useful to answer &quot;what if&quot; questions. But we can go further and abuse &lt;code&gt;with&lt;/code&gt; to mock Datomic connections in-memory. Here is a complete implementation, which is essentially an Atom holding database values, which uses &lt;code&gt;with&lt;/code&gt; for writes (gist here):&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;import 'datomic.Connection&amp;#41;
+&amp;#40;import '&amp;#40;java.util.concurrent BlockingQueue LinkedBlockingDeque&amp;#41;&amp;#41;
+&amp;#40;require 'datomic.promise&amp;#41;
+&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+
+&amp;#40;defrecord MockConnection
+  &amp;#91;dbAtom, &amp;#94;BlockingQueue txQueue&amp;#93;
+
+  Connection
+  &amp;#40;db &amp;#91;this&amp;#93; @dbAtom&amp;#41;
+  &amp;#40;transact &amp;#91;this tx-data&amp;#93; &amp;#40;doto &amp;#40;datomic.promise/settable-future&amp;#41;
+                             &amp;#40;deliver &amp;#40;let &amp;#91;tx-res
+                                            &amp;#40;loop &amp;#91;&amp;#93;
+                                              &amp;#40;let &amp;#91;old-val @dbAtom
+                                                    tx-res &amp;#40;d/with old-val tx-data&amp;#41;
+                                                    new-val &amp;#40;:db-after tx-res&amp;#41;&amp;#93;
+                                                &amp;#40;if &amp;#40;compare-and-set! dbAtom old-val new-val&amp;#41;
+                                                  tx-res
+                                                  &amp;#40;recur&amp;#41;&amp;#41;
+                                                &amp;#41;&amp;#41;&amp;#93;
+                                        &amp;#40;.add &amp;#94;BlockingQueue txQueue tx-res&amp;#41;
+                                        tx-res&amp;#41;&amp;#41;
+                             &amp;#41;&amp;#41;
+  &amp;#40;transactAsync &amp;#91;this tx-data&amp;#93; &amp;#40;.transact this tx-data&amp;#41;&amp;#41;
+
+  &amp;#40;gcStorage &amp;#91;this olderThan&amp;#93;&amp;#41;
+  &amp;#40;requestIndex &amp;#91;this&amp;#93;&amp;#41;
+  &amp;#40;release &amp;#91;this&amp;#93;&amp;#41;
+  &amp;#40;sync &amp;#91;this&amp;#93; &amp;#40;doto &amp;#40;datomic.promise/settable-future&amp;#41;
+                 &amp;#40;deliver &amp;#40;.db this&amp;#41;&amp;#41;&amp;#41;&amp;#41;
+  &amp;#40;syncExcise &amp;#91;this t&amp;#93; &amp;#40;.sync this&amp;#41;&amp;#41;
+  &amp;#40;syncIndex &amp;#91;this t&amp;#93; &amp;#40;.sync this&amp;#41;&amp;#41;
+  &amp;#40;syncSchema &amp;#91;this t&amp;#93; &amp;#40;.sync this&amp;#41;&amp;#41;
+  &amp;#40;sync &amp;#91;this t&amp;#93; &amp;#40;.sync this&amp;#41;&amp;#41;
+  &amp;#40;txReportQueue &amp;#91;this&amp;#93; &amp;#40;.txQueue this&amp;#41;&amp;#41;
+
+  &amp;#41;
+
+&amp;#40;defn &amp;#94;Connection mock-conn
+  &amp;quot;Creates a mocked version of datomic.Connection which uses db/with internally.
+  Only supports datomic.api/db, datomic.api/transact and datomic.api/transact-async operations.
+  Sync and housekeeping methods are implemented as noops. #log&amp;#40;&amp;#41; is not supported.&amp;quot;
+  &amp;#91;db&amp;#93;
+  &amp;#40;MockConnection. &amp;#40;atom db&amp;#41; &amp;#40;LinkedBlockingDeque.&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;You may be wondering, how is this different than using Datomic's built-in in-memory connections ? (as in &lt;code&gt;&amp;#40;d/connect &amp;quot;datomic:mem://my-db-name&amp;quot;&amp;#41;&amp;#41;&lt;/code&gt;) Well, Datomic's in-memory connections start with a blank database, whereas in the above implementation the user provides a &lt;em&gt;starting-point database&lt;/em&gt;. This starting point might be a database loaded with fixture data; it might also be your current production database!&lt;/p&gt;&lt;p&gt;In particular, you can use these mock connections to make a local 'fork' of any Datomic connection:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn &amp;#94;Connection fork-conn
+  &amp;quot;Creates a local fork of the given Datomic connection.
+  Writes to the forked connection will not affect the original;
+  conversely, writes to the original connection will not affect the forked one.&amp;quot;
+  &amp;#91;conn&amp;#93;
+  &amp;#40;mock-conn &amp;#40;d/db conn&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;&lt;strong&gt;Analogy to Git:&lt;/strong&gt; This is the same notion of forking as in Git, where database values are like commits, and connections are like branches.  (However, unlike Git, there is no 'merge' operation).&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;forking&amp;#95;universes&quot;&gt;&lt;/a&gt;Forking universes&lt;/h2&gt;&lt;p&gt;This notion of forking is interesting, and applicable to other objects than Datomic connections. For example, immutable data structures and simple mutable interfaces (e.g HTTP session stores) can be forked too.&lt;/p&gt;&lt;p&gt;Which brings us to the main point: if the universes of your application have Datomic as their main data store, then you can &lt;em&gt;fork&lt;/em&gt; these universes.&lt;/p&gt;&lt;p&gt;&lt;em&gt;Forking&lt;/em&gt; a universe is making a local 'copy' of a universal which behaves exactly as the original one, in which you can mess around without affecting the original one.&lt;/p&gt;&lt;p&gt;This is of tremendous value for system-level testing. Because of functional programming, Clojure already has a great story for testing &lt;em&gt;in the small&lt;/em&gt;, but in the large, your system is essentially a process which performs in-place updates in response to events. Forkable connections are a nice fit for this model. Forget about your setup and teardown phases: instead, you have a &lt;em&gt;starting point&lt;/em&gt; universe,  and for each of your tests which involves writes, you simply fork off another universe, perform your tests, and forget about it when you're done.  Garbage collection will do the cleaning up for you.&lt;/p&gt;&lt;p&gt;For instance, imagine you have an e-commerce website, and you want to test the purchase flow. The purchase flow consists of the user signing up, verifying her account, adding items to the cart, and checking out. Typically, the test will consist of one ideal scenario, and several scenarios where things go wrong, like the cart expiring or the user logging out before checking out. You can easily test this by branching off several universes matching different scenarios as you progress along the user path:&lt;/p&gt;&lt;p&gt;&lt;img src=&quot;/img/funnel-purchase.png&quot; width=&quot;100%&quot;&gt;&lt;/p&gt;&lt;p&gt;The code for testing this may look like the following:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;let &amp;#91;u &amp;#40;fork starting-point-universe&amp;#41;&amp;#93;
+  &amp;#40;create-account! u&amp;#41;
+
+  &amp;#40;let &amp;#91;u &amp;#40;fork u&amp;#41;&amp;#93;
+    &amp;#40;expect-to-fail
+      &amp;#40;add-items-to-cart! u some-items-data&amp;#41;&amp;#41;&amp;#41;
+
+  &amp;#40;verify-account! u&amp;#41;
+
+  &amp;#40;let &amp;#91;u &amp;#40;fork u&amp;#41;&amp;#93;
+    &amp;#40;expect-to-fail
+      &amp;#40;add-items-to-cart! u sold-out-items-data&amp;#41;&amp;#41;&amp;#41;
+
+  &amp;#40;add-items-to-cart! u some-items-data&amp;#41;
+
+  &amp;#40;let &amp;#91;u &amp;#40;fork u&amp;#41;&amp;#93;
+    &amp;#40;expect-to-fail
+      &amp;#40;log-out! u&amp;#41;
+      &amp;#40;pay-and-check-out! u&amp;#41;&amp;#41;&amp;#41;
+
+  &amp;#40;let &amp;#91;u &amp;#40;assoc &amp;#40;fork u&amp;#41;
+            :now &amp;#40;after-the-cart-has-expired&amp;#41;&amp;#41;&amp;#93;
+    &amp;#40;expect-to-fail
+      &amp;#40;pay-and-check-out! u&amp;#41;&amp;#41;&amp;#41;
+
+  &amp;#40;expect-to-succeed
+    &amp;#40;pay-and-check-out! u&amp;#41;&amp;#41;
+  &amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Forkable universes also offer a lot of leverage of interactive development. Sometimes I want to work in my development environment with my production data, but without committing any change to my production database;  this is useful for experimenting with new features, or for demonstration purposes.  All I have to is fork my production context and run my local server on it.&lt;/p&gt;&lt;p&gt;I can also imagine automating the above idea to make &quot;inspection tests&quot;, in which you would periodically simulate some scenarios on your production data.&lt;/p&gt;&lt;p&gt;Finally, I think forkability makes room for some REPL-friendly debugging techniques.  For example, you can insert 'checkpoints' in a code path you're debugging, which when reached will make forks of the current universe and store them.  You can then retrieve these checkpoints to inspect the past of the universe, or to replay some steps manually.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;about&amp;#95;mutability&quot;&gt;&lt;/a&gt;About mutability&lt;/h2&gt;&lt;p&gt;Universes are essentially about mutability and side-effects, which may seem at odds with the functional spirit of Clojure and Datomic. That's not the case in my opinion, since Clojure positioned itself &lt;a href='http://www.infoq.com/presentations/Value-Identity-State-Rich-Hickey'&gt;since the beginning&lt;/a&gt; as supporting mutability in the few places where it is a better fit than a purely functional style.&lt;/p&gt;&lt;p&gt;Having said that, universes and the ability to fork them are no excuse to make a mutable imperative mess. You still want to make the building blocks of your application purely functional, on as large a scale as is reasonable.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;practical&amp;#95;usage&quot;&gt;&lt;/a&gt;Practical usage&lt;/h2&gt;&lt;p&gt;I have a test namespace with a function to create 'starting-point universe' loaded with fixture data. This function is called by tests, and by me from the REPL. Because loading the database schema and fixture data can take some time (~100ms), I back this function with a TTL cache of a few seconds. This allows me to never have a stale context as my code evolves, while not wasting time on a heavy setup phase for each test.&lt;/p&gt;&lt;p&gt;On top of that, I have a dev namespace with 2 functions &lt;code&gt;fu&lt;/code&gt; (&lt;em&gt;Fresh Universe&lt;/em&gt;) and &lt;code&gt;lu&lt;/code&gt; (&lt;em&gt;Local Universe&lt;/em&gt;). Both return universes with fixture data, but &lt;code&gt;fu&lt;/code&gt; returns a different universe each time it is called (stateless), whereas &lt;code&gt;lu&lt;/code&gt; creates a universe the first time and then returns it (session); there is an optional param to reset the universe returned by &lt;code&gt;lu&lt;/code&gt;.&lt;/p&gt;&lt;p&gt;To achieve full universe forkability, I also had to make mock implementations of a few key-value stores in addition to Datomic, such as Ring session stores.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;parting&amp;#95;thoughts&quot;&gt;&lt;/a&gt;Parting thoughts&lt;/h2&gt;&lt;p&gt;I am constantly amazed to see how immutability, although it encourages functional programming, also makes dealing with side-effects and mutable places better. This is a lesson we have learned in the small with Clojure's STM, and now we're learning it in the large with Datomic.&lt;/p&gt;&lt;p&gt;At &lt;a href='https://www.bandsquare.com'&gt;BandSquare&lt;/a&gt; we have applied the above ideas to our whole backend system, to great benefits so far. We will continue to explore the possibilities and limitations of forkable universes, and we welcome your feedback.&lt;/p&gt;&lt;p&gt;Happy New Year!&lt;/p&gt;
+</description>
+<pubDate>
+Sun, 03 Jan 2016 00:00:00 +0100
+</pubDate>
+</item>
 <item>
 <guid>
 http://blogawesome.com/posts/2015-09-16-bottup-approach-to-reagent-state.html
