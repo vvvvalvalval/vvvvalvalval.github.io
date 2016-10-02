@@ -12,11 +12,228 @@ http://blogawesome.com/
 This blog is awesome
 </description>
 <lastBuildDate>
-Sun, 28 Feb 2016 11:14:01 +0100
+Sun, 02 Oct 2016 19:56:40 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://blogawesome.com/posts/2016-07-24-datomic-wab-app-a-practical-guide.html
+</guid>
+<link>
+http://blogawesome.com/posts/2016-07-24-datomic-wab-app-a-practical-guide.html
+</link>
+<title>
+Using Datomic in your app: a practical guide
+</title>
+<description>
+&lt;p&gt;&lt;em&gt;Schema rigidity, N+1 problem, impedance mismatch, remote querying, consistency...&lt;/em&gt;  Datomic eliminates many of the biggest problems of traditional databases.  That's how I like to pick technologies: to solve the hard problems for me and leave me the easy ones.  I have been using Datomic professionally for over 8 months now, and I can testify that it's given me a tremendous boost in productivity and quality,  even for ordinary web development tasks.&lt;/p&gt;&lt;p&gt;However, because Datomic is so different from other databases, and because its young ecosystem still lacks convention,  it's taken me some time and thought (at least a week) to come up with an architecture that is practical and lets me leverage its special powers.  My hope is that by reading this post, you'll be able to get started more quickly.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;required&amp;#95;background&quot;&gt;&lt;/a&gt;Required background&lt;/h2&gt;&lt;p&gt;The code samples will be in Clojure, but most of the ideas behind them translate easily to other JVM languages.&lt;/p&gt;&lt;p&gt;I will not dive into the generalities of web development with Clojure; for that, I recommend the &lt;a href='http://www.luminusweb.net/'&gt;Luminus Framework&lt;/a&gt;.  I will only focus on the aspects that are specific to Datomic.&lt;/p&gt;&lt;p&gt;I am assuming that you have basic notions of how Datomic works.  If you don't, I heartedly recommend the &lt;a href='http://www.datomic.com/training.html'&gt;Day of Datomic&lt;/a&gt; training series, as well as the &lt;a href='http://docs.datomic.com/'&gt;official documentation&lt;/a&gt;.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;a&amp;#95;quick&amp;#95;datomic&amp;#95;refresher&quot;&gt;&lt;/a&gt;A quick Datomic refresher&lt;/h3&gt;&lt;ul&gt;&lt;li&gt;In Datomic, the basic unit of information if the &lt;em&gt;datom&lt;/em&gt;,which is a 5-tuple of the form &lt;code&gt;&amp;#91;&amp;lt;entity id&amp;gt; &amp;lt;attribute&amp;gt; &amp;lt;value&amp;gt; &amp;lt;transaction id&amp;gt; &amp;lt;operation&amp;gt;&amp;#93;&lt;/code&gt;, representing a fact. Examples of datoms are &lt;code&gt;&amp;#91;42 :user/email &amp;quot;hello@gmail.com&amp;quot; 201 true&amp;#93;&lt;/code&gt; and &lt;code&gt;&amp;#91;42 :user/friend 42 206 false&amp;#93;&lt;/code&gt;. The &lt;em&gt;transaction id&lt;/em&gt; essentially tells us the time at which the fact was added to the system; the &lt;em&gt;operation&lt;/em&gt; tells us   if we learned the fact or unlearned it.&lt;/li&gt;&lt;li&gt;A Datomic &lt;em&gt;database value&lt;/em&gt; is an immutable, shared data structure that is logically a set of datoms.A database value represents all the knowledge we have at a certain point in time. It's analogous to a &lt;em&gt;commit&lt;/em&gt; in Git.&lt;/li&gt;&lt;li&gt;Database values only grow by accumulating new datoms (there's no 'remove' operation: they do not 'forget' facts).&lt;/li&gt;&lt;li&gt;A Datomic system is a succession of database values. The succession of values is controlled by a process called the Transactor. A Datomic &lt;em&gt;Connection&lt;/em&gt; is a remote &lt;em&gt;reference&lt;/em&gt; to the current database value (similar to a &lt;a href='http://clojure.org/reference/agents'&gt;Clojure Agent&lt;/a&gt;). You can immediately get the current database value from a connection, and you can send writes (called &lt;a href='http://docs.datomic.com/transactions.html'&gt;transaction requests&lt;/a&gt;) asynchronously to the connection.&lt;/li&gt;&lt;li&gt;With Datomic, reading is local, and happens on the application process (which is called a 'Peer'). This is possible because database values are immutable, therefore easy to cache and location-transparent. As a peer queries a database value, it gets lazily loaded and cached into its memory, by chunks (called &lt;em&gt;segments&lt;/em&gt;) so as to avoid many I/O roundtrips to storage.&lt;/li&gt;&lt;li&gt;Datomic provides a low-level reading interface via its &lt;a href='http://docs.datomic.com/indexes.html'&gt;indexes&lt;/a&gt;,  as well 2 high-level reading interfaces on top of it: the &lt;a href='http://docs.datomic.com/query.html'&gt;Datalog&lt;/a&gt; query language and &lt;a href='http://docs.datomic.com/entities.html'&gt;Entities&lt;/a&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;&lt;a name=&quot;business&amp;#95;logic&quot;&gt;&lt;/a&gt;Business Logic&lt;/h2&gt;&lt;h3&gt;&lt;a name=&quot;represent&amp;#95;business&amp;#95;entities&amp;#95;with...&amp;#95;entities&quot;&gt;&lt;/a&gt;Represent business entities with... Entities&lt;/h3&gt;&lt;p&gt;When I was programming with client-server databases, I often asked myself questions like:  &lt;em&gt;Should my function accept an id for this entity? Or should it accept a map representing the entity? If so, what attributes of the entity do I need? What if I need more?&lt;/em&gt; etc.  Obviously there's a balance to be struck between flexibility and performance when  addressing this kind of dilemma, because we're talking about a potentially costly roundtrip to the database server.&lt;/p&gt;&lt;p&gt;With Datomic we don't have this dilemma, because we have Entities. Entities are about as cheap to make as identifiers,  contain as much information as the whole database, and provide a convenient map-like interface.  So the guideline is simple: I always use Entities as the unit of information to communicate between my business logic functions.&lt;/p&gt;&lt;p&gt;For instance, here's a function which finds the comments of a user about a post:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+
+&amp;#40;defn comments-of-user-about-post
+  &amp;quot;Given a user Entity and a post Entity, returns the user's comments about that post as a seq of Entities.&amp;quot;
+  &amp;#91;user post&amp;#93;
+  &amp;#40;let &amp;#91;db &amp;#40;d/entity-db user&amp;#41;&amp;#93;
+    &amp;#40;-&amp;gt;&amp;gt; &amp;#40;d/q '&amp;#91;:find &amp;#91;?comment ...&amp;#93; :in $ ?user ?post :where
+                &amp;#91;?comment :comment/post ?post&amp;#93;
+                &amp;#91;?comment :comment/user ?user&amp;#93;&amp;#93;
+           db &amp;#40;:db/id user&amp;#41; &amp;#40;:db/id post&amp;#41;&amp;#41;
+     &amp;#40;map #&amp;#40;d/entity db %&amp;#41;&amp;#41;
+     &amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;On the whole, I implement business logic using a few categories of functions:&lt;ul&gt;&lt;li&gt;functions that accept entities, and return other entities (like in the example above)&lt;/li&gt;&lt;li&gt;functions that accept entities, and compute a result (e.g a boolean for making a decision, or a number synthesized from an aggregation)&lt;/li&gt;&lt;li&gt;functions that accept entities, and return transaction data (for writing)&lt;/li&gt;&lt;/ul&gt;In addition, at the boundaries of my domain logic, I have functions which convert entities to and from entities, mostly:&lt;ul&gt;&lt;li&gt;&lt;em&gt;finder&lt;/em&gt; functions, accepting a db value and an identifier and returning an entity, e.g &lt;code&gt;&amp;#40;find-user-by-id db #uuid&amp;quot;57062d44-8829-4776-af3a-2fdf4d7ce93a&amp;quot;&amp;#41;&lt;/code&gt;&lt;/li&gt;&lt;li&gt;&lt;em&gt;clientizer&lt;/em&gt; functions, accepting an entity and returning a data structure (typically a plain old map)which can be sent over the network (typically to the  client), serialized as JSON or Transit for example.Here's an example of clientizer function:&lt;/li&gt;&lt;/ul&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;defn cl-comment
+  &amp;quot;clientizes a comment.&amp;quot;
+  &amp;#91;cmt&amp;#93;
+  {:id &amp;#40;:comment/id cmt&amp;#41;
+   :content &amp;#40;:comment/content cmt&amp;#41;
+   :author {:id &amp;#40;-&amp;gt; cmt :comment/author :user/id&amp;#41;}
+   :post {:id &amp;#40;-&amp;gt; cmt :comment/post :post/id&amp;#41;}}&amp;#41;
+ &lt;/code&gt;&lt;/pre&gt;&lt;/p&gt;&lt;p&gt;Don't forget that in Datomic the database is effectively local, so you don't have the N+1 problem.  This means you can feel free to handle a request by doing many simple queries instead of one big query. &lt;strong&gt;&lt;i&gt;A query is not an expedition.&lt;/i&gt;&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;For example, imagine you want to make a Compojure REST endpoint that fetches the comments of a user about a specific post. Because you want to save network roundtrips to database storage, you may write it as:&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;;; BAD
+&amp;#40;GET &amp;quot;/posts/:postId/comments-of-user/:userId&amp;quot;
+  &amp;#91;postId userId :as req&amp;#93;
+  &amp;#40;let &amp;#91;db &amp;#40;:db req&amp;#41;&amp;#93;
+    {:body &amp;#40;-&amp;gt;&amp;gt;
+             ;; big hairy query, which complects resources identification, domain logic, and result layout
+             &amp;#40;d/q '&amp;#91;:find ?id ?content ?userId ?postId
+                    :in $ ?userId ?postId :where
+                    ;; resources identification
+                    &amp;#91;?user :user/id ?userId&amp;#93;
+                    &amp;#91;?post :post/id ?postId&amp;#93;
+                    ;; domain logic
+                    &amp;#91;?comment :comment/post ?post&amp;#93;
+                    &amp;#91;?comment :comment/author ?user&amp;#93;
+                    ;; result layout
+                    &amp;#91;?comment :comment/id ?id&amp;#93;
+                    &amp;#91;?comment :comment/content ?content&amp;#93;
+                    &amp;#93;
+               db userId postId&amp;#41;
+             &amp;#40;map &amp;#40;fn &amp;#91;&amp;#91;id content userId postId&amp;#93;&amp;#93;
+                    {:id id
+                     :content content
+                     :author {:id userId}
+                     :post {:id postId}}&amp;#41;&amp;#41;&amp;#41;}&amp;#41;&amp;#41;
+ &lt;/code&gt;&lt;/pre&gt; Obviously this is not great for code reuse. Well, you don't have to do that. Instead, you can compose the simple functions we have defined above and just write:&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;;; GOOD
+&amp;#40;GET &amp;quot;/posts/:postId/comments-of-user/:userId&amp;quot;
+  &amp;#91;postId userId :as req&amp;#93;
+  &amp;#40;let &amp;#91;db &amp;#40;:db req&amp;#41;
+        ;; resources identification
+        user &amp;#40;find-user-by-id db userId&amp;#41;
+        post &amp;#40;find-post-by-id db postId&amp;#41;&amp;#93;
+    {:body &amp;#40;-&amp;gt;&amp;gt; &amp;#40;comments-of-user-about-post user post&amp;#41; ;; domain logic
+             &amp;#40;map cl-comment&amp;#41; ;; result layout
+             &amp;#41;}&amp;#41;&amp;#41;
+ &lt;/code&gt;&lt;/pre&gt; There are many queries involved here, but there will be very few roundtrips to storage, typically one or two, and maybe zero if the relevant segments are already cached on the Peer.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;querying:&amp;#95;datalog&amp;#95;vs&amp;#95;entities.&quot;&gt;&lt;/a&gt;Querying: Datalog vs Entities.&lt;/h3&gt;&lt;p&gt;&lt;div style=&quot;text-align:center;&quot;&gt;&lt;img src=&quot;/img/DATALOG-VS-ENTITIES.jpg&quot; width=&quot;400px&quot;&gt;&lt;/div&gt;&lt;/p&gt;&lt;p&gt;Datomic gives you 2 main mechanisms for querying: Entities and Datalog queries. They're very complementary; feel free to mix and match them!&lt;ul&gt;&lt;li&gt;Datalog works though pattern recognition in the database graph. It has its own constructs for control flow and abstraction, and is useful for expressing domain logic via declarative rules.&lt;/li&gt;&lt;li&gt;Entities are useful for 'navigating' around in your database, using your programming language for control flow and abstraction.&lt;/li&gt;&lt;/ul&gt;Additionally, both Datalog and Entities can use the &lt;a href='http://docs.datomic.com/pull.html'&gt;Pull API&lt;/a&gt;, which is a declarative, data-oriented way of specifying what information about an entity you're interested in.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;schema&amp;#95;/&amp;#95;model&amp;#95;declaration&quot;&gt;&lt;/a&gt;Schema / model declaration&lt;/h2&gt;&lt;p&gt;Before you can add useful data to Datomic, you need to &lt;em&gt;install your schema&lt;/em&gt;, which specifies the set of attributes that represent your domain model in Datomic.&lt;/p&gt;&lt;p&gt;In Datomic, installing your schema consists of submitting a regular transaction. Attribute installation transactions are idempotent,  so you can just write your schema installation transaction in your application code and &lt;code&gt;transact&lt;/code&gt; in your server startup code.&lt;/p&gt;&lt;p&gt;Here's an example of a schema installation transaction, representing a Person entity with id, email and name fields:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;ns myapp.model
+  &amp;#40;:require &amp;#91;datomic.api :as d&amp;#93;&amp;#41;&amp;#41;
+
+&amp;#40;def schema
+  &amp;#91;{:db/id &amp;#40;d/tempid :db.part/db&amp;#41;
+    :db/ident :person/name
+    :db/valueType :db.type/uuid
+    :db/unique :db.unique/identity
+    :db/doc &amp;quot;A person's unique id&amp;quot;
+    :db/cardinality :db.cardinality/one
+    :db.install/&amp;#95;attribute :db.part/db}
+   {:db/id &amp;#40;d/tempid :db.part/db&amp;#41;
+    :db/ident :person/email
+    :db/valueType :db.type/string
+    :db/doc &amp;quot;A person's email address&amp;quot;
+    :db/fulltext true
+    :db/cardinality :db.cardinality/one
+    :db.install/&amp;#95;attribute :db.part/db}
+   {:db/id &amp;#40;d/tempid :db.part/db&amp;#41;
+    :db/ident :person/name
+    :db/valueType :db.type/string
+    :db/doc &amp;quot;A person's name&amp;quot;
+    :db/fulltext true
+    :db/cardinality :db.cardinality/one
+    :db.install/&amp;#95;attribute :db.part/db}&amp;#93;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;There is a &lt;a href='http://stackoverflow.com/questions/31416378/recommended-way-to-declare-datomic-schema-in-clojure-application'&gt;variety of opinions&lt;/a&gt; on how you should declare and install your schema, but in my view we have 2 issues here:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;Issue 1: there's a lot of noise; ideally we'd like to spend 1 LoC on each attribute, not 7.&lt;/li&gt;&lt;li&gt;Issue 2: it's &lt;em&gt;only&lt;/em&gt; useful for Datomic schema installation, whereas you may want to declare a schema for your data model for other purposes   (input validation, documentation, REST endpoints generation, plumatic Schemas, test.check generators, etc.).  In other words, when implementing these other aspects of your data model, you'll be to duplicating code to some extent.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;There are several libraries which tackle these issues; some are just concise DSLs on top of Datomic schema transactions,  while others take care of more things (but are also more opinionated):&lt;ul&gt;&lt;li&gt;&lt;a href='https://github.com/Yuppiechef/datomic-schema'&gt;datomic-schema&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='https://github.com/cloojure/tupelo-datomic'&gt;tupelo-datomic&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='https://github.com/SparkFund/spec-tacular'&gt;spec-tacular&lt;/a&gt;&lt;/li&gt;&lt;li&gt;&lt;a href='https://github.com/zcaudate/adi'&gt;adi&lt;/a&gt;&lt;/li&gt;&lt;/ul&gt;The general idea is always the same: have a DSL generate a high-level data structure representing your data model, then &lt;em&gt;derive&lt;/em&gt; your Datomic schema installation transactions (and other things) from this data structure.&lt;/p&gt;&lt;p&gt;Personally, none of these libraries satisfied me completely for my use case, so I wrote up my own little DSL for dealing with Issue 1  (it's not hard, really, you can totally get away with it).  I've been coping with Issue 2 so far without too much trouble - it's a pain, but really not what I spend most time on.  So really, see what works for you.&lt;/p&gt;&lt;p&gt;In this regard, you may be wondering:&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;where's&amp;#95;my&amp;#95;orm?&quot;&gt;&lt;/a&gt;Where's my ORM?&lt;/h3&gt;&lt;p&gt;&lt;em&gt;(If you're definitely not interested in ORMs, you may skip this section).&lt;/em&gt;&lt;/p&gt;&lt;p&gt;Well, first off, you have to consider that Clojure is not Object-oriented, and that Datomic is not Relational (in the sense that data  is not structured as relations, which is a fancy name for tables). So much for O and R.&lt;/p&gt;&lt;p&gt;However, this doesn't mean that you wouldn't want to perform a Mapping of some sort. One of goals of ORMs is to let you use constructs of  your programming language. What with Entities and the Pull API, Datomic already goes a long way to facilitate that.&lt;/p&gt;&lt;p&gt;Another feature of ORMs is to address other issues with your data, such as validation (see 'Issue 2' above).  Datomic doesn't provide anything to help you do that.&lt;/p&gt;&lt;p&gt;If that's an issue, you may even want to roll out your own mapping library.  Implementing ORMs is knowingly difficult, but Clojure/Datomic Mapping should be significantly easier that Object/Relational Mapping,  because many of the fundamental issues of SQL databases and Object-Oriented languages simply don't exist in these technologies:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;The database is immutable and not remote, which eliminates most of the thorny distributed systems / concurrency issues you would face when implementing an ORM for a client-server database.&lt;/li&gt;&lt;li&gt;The impedance mismatch between Datomic databases and Clojure data structures is &lt;em&gt;much&lt;/em&gt; smaller than the impedance mismatch between relations and objects.&lt;/li&gt;&lt;li&gt;The DDL of Datomic is first-class data, which you can run query against and annotate as much as you want.&lt;/li&gt;&lt;li&gt;You're not constrained by a class system for declaring schemas, so you can use the syntax and information model you want.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;(Don't be too eager to go down that road though. Chances are you'll be &lt;em&gt;fine&lt;/em&gt; with just Datomic)&lt;/p&gt;&lt;p&gt;ORMs tend to be frowned upon in the Clojure community, because existing ORM implementations are so incompatible with the idea of simplicity,  because they encourage terrible distributed system semantics,  and probably also because many the Java Enterprise veterans of the community had a traumatic experience with them.&lt;/p&gt;&lt;p&gt;However, I do believe that some of the appeal of ORMs is valid.  Maybe what's missing in this space is a generic, extensible way to declare your schemas and derive behaviour from them,  and I might eventually come up with a library that lets you do it à la carte. Stay tuned.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;data&amp;#95;migrations&quot;&gt;&lt;/a&gt;Data Migrations&lt;/h2&gt;&lt;p&gt;Part of database management is ensuring your database schema evolves in sync with your application code.&lt;/p&gt;&lt;p&gt;As we've seen, adding an attribute (the equivalent of adding a column or table is SQL) is straightforward.  You can just reinstall your whole schema at deployment time. Same thing for &lt;a href='http://docs.datomic.com/database-functions.html'&gt;database functions&lt;/a&gt;.&lt;/p&gt;&lt;p&gt;Modifying an attribute (e.g changing the type of &lt;code&gt;:person/id&lt;/code&gt; from &lt;code&gt;:db.type/uuid&lt;/code&gt; to &lt;code&gt;:db.type/string&lt;/code&gt;) is more problematic,  and I suggest you do your best to avoid it. Try to get your schema right in the first place; experiment with it in the  in-memory connection before committing it to durable storage. If you have committed it already, consider versioning the attribute  (e.g &lt;code&gt;:person.v2/id&lt;/code&gt;).&lt;/p&gt;&lt;p&gt;You probably won't ever need to delete an attribute. Just stop using it in your application code.&lt;/p&gt;&lt;p&gt;Finally, you will sometimes need to run a migration that does not consist of modifying the schema, but the data itself  (fixing badly formatted data, adding a default value of a new attribute, etc.).  You want to run these migrations exactly once at deployment time.  The strategy for that is:&lt;ol&gt;&lt;li&gt;write a transaction function for your migration&lt;/li&gt;&lt;li&gt;keep track of what transaction have already been run in the database&lt;/li&gt;&lt;li&gt;have a generic transaction function that conditionally runs another transaction only if it has not already been run&lt;/li&gt;&lt;li&gt;at deployment time, send your migration transactions wrapped by the generic transaction function to the transactor.  This way the transactional features of Datomic take care of the coordination for you.&lt;/li&gt;&lt;/ol&gt;Note that there's a library called &lt;a href='https://github.com/rkneufeld/conformity'&gt;Conformity&lt;/a&gt; which takes care of 2, 3 and 4 for you.&lt;/p&gt;&lt;p&gt;As an example, imagine that you realize you stored all of your user's email addresses without controlling the case,  and you want to convert them to lower case.&lt;/p&gt;&lt;p&gt;You will add this transaction function to your schema:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;{:db/id &amp;#40;d/tempid :db.part/user&amp;#41;
+ :db/ident :myapp.fns.migrations/lowercase-user-emails
+ :db/fn &amp;#40;d/function
+          {:lang &amp;quot;clojure&amp;quot;
+           :params '&amp;#91;db&amp;#93;
+           :requires '&amp;#40;&amp;#91;datomic.api :as d&amp;#93;
+                       &amp;#91;clojure.string :as str&amp;#93;&amp;#41;
+           :code '&amp;#40;for &amp;#91;&amp;#91;user email&amp;#93; &amp;#40;d/q '&amp;#91;:find ?user ?email :where
+                                            &amp;#91;?user :user/email ?email&amp;#93;&amp;#93;
+                                       db&amp;#41;&amp;#93;
+                    &amp;#91;:db/add user :user/email &amp;#40;str/lower-case email&amp;#41;&amp;#93;&amp;#41;}&amp;#41;}
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Then the transaction that runs your migration is simply:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#91;&amp;#91;myapp.fns.migrations/lowercase-user-emails&amp;#93;&amp;#93;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;The generic transaction function for conditionnaly running migrations may look like the following:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#91;{:db/id &amp;#40;d/tempid :db.part/user&amp;#41;
+  :db/ident :run-tx-if-necessary
+  :db/doc &amp;quot;runs the given named transaction if it has not already been run.&amp;quot;
+  :db/fn &amp;#40;d/function
+           {:lang &amp;quot;clojure&amp;quot;
+            :params '&amp;#91;db migr-name tx-data&amp;#93;
+            :requires '&amp;#40;&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+            :code '&amp;#40;when-not &amp;#40;d/q '&amp;#91;:find ?migr . :in $ ?name :where
+                                    &amp;#91;?migr :migration/name ?name&amp;#93;&amp;#93;
+                               db migr-name&amp;#41;
+                     &amp;#40;concat
+                       &amp;#91;&amp;#91;:db/add &amp;#40;d/tempid :db.part/user&amp;#41; :migration/name ?name&amp;#93;&amp;#93;
+                       tx-data&amp;#41;&amp;#41;}&amp;#41;}
+ {:db/id &amp;#40;d/tempid :db.part/db&amp;#41;
+  :db/ident :migration/name
+  :db/valueType :db.type/string
+  :db/unique :db.unique/identity
+  :db/doc &amp;quot;Support attribute for :run-tx-if-necessary&amp;quot;
+  :db/cardinality :db.cardinality/one
+  :db.install/&amp;#95;attribute :db.part/db}&amp;#93;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Then conditionally running the migration simply consists of transacting the following:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#91;&amp;#91;:run-tx-if-necessary &amp;quot;lowercase-user-emails&amp;quot; &amp;#91;&amp;#91;myapp.fns.migrations/lowercase-user-emails&amp;#93;&amp;#93;&amp;#93;&amp;#93;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Again, if you're using Comformity, you needn't concern yourself with that. This is just to give you an idea of how it works.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;testing&amp;#95;and&amp;#95;development&amp;#95;workflow&quot;&gt;&lt;/a&gt;Testing and development workflow&lt;/h2&gt;&lt;p&gt;A significant part of the leverage you get from using Clojure and Datomic is the testing and interactive development stories. These are not trivial to get right, so you need to plan your architecture and workflow for them. Hopefully I've done most of the work for you.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;fixture&amp;#95;data&quot;&gt;&lt;/a&gt;Fixture data&lt;/h3&gt;&lt;p&gt;If you're doing example-based testing, you're going to need some example data for your tests to work on, aka &lt;em&gt;fixture data&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Simply have a namespace where you write your fixtures as Datomic transactions, which will be run when your create your Datomic connection for testing or development.&lt;/p&gt;&lt;p&gt;You'll also want to expose some stable identifiers so that your test code can find the particular entities that interest them in the fixtures.&lt;/p&gt;&lt;p&gt;Example:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;ns myapp.fixtures
+  &amp;#40;:require &amp;#91;datomic.api :as d&amp;#93;&amp;#41;&amp;#41;
+
+&amp;#40;def person1-id #uuid&amp;quot;579ef389-525e-4017-bdd7-3eebb4a1f484&amp;quot;&amp;#41;
+&amp;#40;def person2-id #uuid&amp;quot;579ef39b-13af-4acd-b3c9-3fb63a42d2ef&amp;quot;&amp;#41;
+
+&amp;#40;def persons
+  &amp;#91;{:person/id person1-id
+    :person/email &amp;quot;person1@gmail.com&amp;quot;
+    :person/name &amp;quot;Odysseus&amp;quot;
+    :db/id &amp;#40;d/tempid :db.part/user&amp;#41;}
+   {:person/id person2-id
+    :person/email &amp;quot;person2@gmail.com&amp;quot;
+    :person/name &amp;quot;Calliope&amp;quot;
+    :db/id &amp;#40;d/tempid :db.part/user&amp;#41;}&amp;#93;&amp;#41;
+
+;; &amp;#91;...&amp;#93;
+
+&amp;#40;defn tx-fixtures
+  &amp;quot;Returns a transaction which installs all the fixture data.&amp;quot;
+  &amp;#91;&amp;#93;
+  &amp;#40;concat
+    persons
+    ;; &amp;#91;...&amp;#93;
+    &amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;creating&amp;#95;in-memory&amp;#95;connections&quot;&gt;&lt;/a&gt;Creating in-memory connections&lt;/h3&gt;&lt;p&gt;The next thing we need is a way to obtain an in-memory Datomic connection with all the schema and fixture data installed.&lt;/p&gt;&lt;p&gt;Here's an implementation, which we'll modify slightly when we learn about forking connections.&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.schema :as mysc&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.fixtures :as fix&amp;#93;&amp;#41;
+
+&amp;#40;defn scratch-conn
+  &amp;quot;Creates an in-memory Datomic connection.
+  NOTE: we actually won't be using this implementation, see next section on forking connections.&amp;quot;
+  &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;uri &amp;#40;str &amp;quot;datomic:mem://&amp;quot; &amp;quot;mem-conn-&amp;quot; &amp;#40;d/squuid&amp;#41;&amp;#41;&amp;#93;
+    &amp;#40;d/create-database uri&amp;#41;
+    &amp;#40;d/connect uri&amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;defn fixture-conn
+  &amp;quot;Creates a Datomic connection with the schema and fixture data installed.&amp;quot;
+  &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;conn &amp;#40;scratch-conn&amp;#41;&amp;#93;
+    @&amp;#40;d/transact conn &amp;#40;mysc/tx-schema&amp;#41;&amp;#41;
+    @&amp;#40;d/transact conn &amp;#40;fix/tx-fixtures&amp;#41;&amp;#41;
+    conn&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;forking&amp;#95;database&amp;#95;connections&quot;&gt;&lt;/a&gt;Forking database connections&lt;/h3&gt;&lt;p&gt;So now we have connections that we can use for development and testing. That's a good start, but in their current form they can be impractical:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;if you run a test case which does writes, and want to go back to a fresh state, you'll need to explicitlyrelease the current connection and make a new one;&lt;/li&gt;&lt;li&gt;on my dev laptop, running &lt;code&gt;&amp;#40;fixture-conn&amp;#41;&lt;/code&gt; takes about 300 ms to create the database and install the schema and fixture.If you plan on running dozens or hundreds of tests, this can feel really slow.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Fortunately, a few months ago I discovered that you can use one of Datomic's superpowers, &lt;em&gt;speculative writes&lt;/em&gt; (aka &lt;a href='http://docs.datomic.com/clojure/#datomic.api/with'&gt;db.with()&lt;/a&gt;), to implement an &lt;em&gt;fork&lt;/em&gt; operation on Datomic connections. I could talk at length about forking connections (and I do it &lt;a href='http://vvvvalvalval.github.io/posts/2016-01-03-architecture-datomic-branching-reality.html'&gt;here&lt;/a&gt;); in a nutshell, forking a connection is the ability to create a new, local connection which holds the same current database value as the old connection, but will evolve independently of the old connection afterwards.&lt;/p&gt;&lt;p&gt;Forking connections solves both our problems because:&lt;ul&gt;&lt;li&gt;you don't need to do any manual resource reclamation; forked connections will just be garbage-collected when you're done with them.&lt;/li&gt;&lt;li&gt;forking is completely inexpensive in time and space (the overhead is that of creating a Clojure Atom).&lt;/li&gt;&lt;/ul&gt;This changes the way we obtain a mock connection: instead of creating a connection from scratch on each test case,we'll create a &lt;em&gt;starting-point&lt;/em&gt; connection once, and then &lt;em&gt;fork&lt;/em&gt; it to obtain a fresh connection for each test case.&lt;/p&gt;&lt;p&gt;I've implemented a tiny library called &lt;a href='https://github.com/vvvvalvalval/datomock'&gt;datomock&lt;/a&gt; which implements this fork operation. It also implements the equivalent of &lt;code&gt;scratch-conn&lt;/code&gt;, so our previous code becomes:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;datomock.core :as dm&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.schema :as mysc&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.fixtures :as fix&amp;#93;&amp;#41;
+
+&amp;#40;defn make-fixture-conn
+  &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;conn &amp;#40;dm/mock-conn&amp;#41;&amp;#93;
+    @&amp;#40;d/transact conn &amp;#40;mysc/tx-schema&amp;#41;&amp;#41;
+    @&amp;#40;d/transact conn &amp;#40;fix/tx-fixtures&amp;#41;&amp;#41;
+    conn&amp;#41;&amp;#41;
+
+&amp;#40;def starting-point-conn &amp;#40;make-fixture-conn&amp;#41;&amp;#41;
+
+&amp;#40;defn fixture-conn
+  &amp;quot;Creates a Datomic connection with the schema and fixture data installed.&amp;quot;
+  &amp;#91;&amp;#93;
+  &amp;#40;dm/fork-conn starting-point-conn&amp;#41;&amp;#41;
+
+&lt;/code&gt;&lt;/pre&gt;(we'll make one more tiny change to this code in the next section. It'll be the last one, I promise!)&lt;p&gt;Forking Datomic connections has other benefits. For instance, forking your production connection enables you to instantly reproduce the state of your production system on your local machine. That's very handy for debugging, or if you need to make a manual modification to your data and want to &quot;rehearse&quot; it locally before  committing it to the production database.&lt;/p&gt;&lt;h3&gt;&lt;a name=&quot;auto-reloading&amp;#95;tests&amp;#95;and&amp;#95;fixture&amp;#95;freshness&quot;&gt;&lt;/a&gt;Auto-reloading tests and fixture freshness&lt;/h3&gt;&lt;p&gt;We still have a problem with the above code: it works fine for running your test suite once or starting a local server, but it's not compatible with interactive development.&lt;/p&gt;&lt;p&gt;Whether you're running your tests in the REPL or using a auto-reloading test runner like Midje, whenever you make changes to your schema or fixture code, starting-point-conn won't get updated automatically, and your tests won't reflect your last code changes.&lt;/p&gt;&lt;p&gt;We solve this using the oldest magic trick of Computer Science: time-based caching! Instead of storing our &lt;code&gt;starting-point-conn&lt;/code&gt; in a Var, we'll cache it with a Time To Live of a few seconds.&lt;/p&gt;&lt;p&gt;If you're using the Google Guava library you can use their in-memory cache directly, otherwise it's easy enough to make your own with an Atom and the core.cache library.&lt;/p&gt;&lt;p&gt;So finally, here's the &lt;strong&gt;whole&lt;/strong&gt; code for creating in-memory connections:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;clojure&quot;&gt;&amp;#40;require '&amp;#91;clojure.core.cache :as cache&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;datomic.api :as d&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;datomock.core :as dm&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.schema :as mysc&amp;#93;&amp;#41;
+&amp;#40;require '&amp;#91;myapp.fixtures :as fix&amp;#93;&amp;#41;
+
+&amp;#40;defn make-fixture-conn
+  &amp;#91;&amp;#93;
+  &amp;#40;let &amp;#91;conn &amp;#40;dm/mock-conn&amp;#41;&amp;#93;
+    @&amp;#40;d/transact conn &amp;#40;mysc/tx-schema&amp;#41;&amp;#41;
+    @&amp;#40;d/transact conn &amp;#40;fix/tx-fixtures&amp;#41;&amp;#41;
+    conn&amp;#41;&amp;#41;
+
+&amp;#40;defonce conn-cache
+  &amp;#40;atom &amp;#40;cache/ttl-cache-factory {} :ttl 5000&amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;defn starting-point-conn &amp;#91;&amp;#93;
+  &amp;#40;:conn &amp;#40;swap! conn-cache #&amp;#40;if &amp;#40;cache/has? % :conn&amp;#41;
+                             &amp;#40;cache/hit % :conn&amp;#41;
+                             &amp;#40;cache/miss % :conn &amp;#40;make-fixture-conn&amp;#41;&amp;#41;&amp;#41;
+           &amp;#41;&amp;#41;&amp;#41;
+
+&amp;#40;defn fixture-conn
+  &amp;quot;Creates a Datomic connection with the schema and fixture data installed.&amp;quot;
+  &amp;#91;&amp;#93;
+  &amp;#40;dm/fork-conn &amp;#40;starting-point-conn&amp;#41;&amp;#41;&amp;#41;
+&lt;/code&gt;&lt;/pre&gt;&lt;h3&gt;&lt;a name=&quot;environments&quot;&gt;&lt;/a&gt;Environments&lt;/h3&gt;&lt;p&gt;In my day-to-day work, the environments I use are:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;'local': in-memory Datomic instance with fixture data.&lt;/li&gt;&lt;li&gt;'dev': Datomic instance on my local machine with real-world data (typically a dump of my production instance).&lt;/li&gt;&lt;li&gt;'prod': Datomic connection of my production system&lt;/li&gt;&lt;li&gt;'dev-fork': fork of the 'dev' Datomic instance, so that I can work on real-world data without persisting anything.&lt;/li&gt;&lt;li&gt;'prod-fork': fork of my production Datomic instance, when I need to work on up-to-date data locally&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;In practice, the environments I use most are 'local', 'dev-fork' and 'prod-fork'.&lt;/p&gt;&lt;h2&gt;&lt;a name=&quot;misc&quot;&gt;&lt;/a&gt;Misc&lt;/h2&gt;&lt;p&gt;Here are some last tips:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;If you have ClojureScript on the client, don't forget to have a look at the &lt;a href='https://github.com/omcljs/om/wiki#om-next'&gt;Om Next architecture&lt;/a&gt;. It's very straightforward to implement with Datomic and the Pull API, and it can save you a lot of work and trouble compared to  setting up a REST architecture.&lt;/li&gt;&lt;li&gt;Check out &lt;a href='https://github.com/tonsky/datascript'&gt;Datascript&lt;/a&gt;, which can make it easy to sync data between Datomic and the client.&lt;/li&gt;&lt;li&gt;One technique that's often useful is &lt;em&gt;attribute sharing&lt;/em&gt;: share an attribute across several entity types. For instance, if there are several entity types for which you want to track the creation time, you may want to have a generic &lt;code&gt;:time/created&lt;/code&gt; attribute, instead of 2 attributes &lt;code&gt;:post/created&lt;/code&gt; and &lt;code&gt;:comment/created&lt;/code&gt;. (There are ways in which you can abuse this approach, just know that it's a possibility).&lt;/li&gt;&lt;li&gt;Write your own lib! The Datomic ecosystem is still young, and Datomic is pretty uniquely extensible via libraries. It's completely okay to write a few helper functions to make your interactions with Datomic more convenient. Think of Datomic as a great &lt;em&gt;foundation&lt;/em&gt; for your database needs.&lt;/li&gt;&lt;/ul&gt;&lt;h2&gt;&lt;a name=&quot;conclusion&quot;&gt;&lt;/a&gt;Conclusion&lt;/h2&gt;&lt;p&gt;I hope you've found this useful, if there's anything that's unclear or missing in this post feel free to comment.  Have fun with Datomic!&lt;/p&gt;
+</description>
+<pubDate>
+Sun, 24 Jul 2016 00:00:00 +0200
+</pubDate>
+</item>
 <item>
 <guid>
 http://blogawesome.com/posts/2016-01-03-architecture-datomic-branching-reality.html
