@@ -12,17 +12,17 @@ http://blogawesome.com/
 This blog is awesome
 </description>
 <lastBuildDate>
-Sun, 02 Oct 2016 19:56:40 +0200
+Sun, 02 Oct 2016 20:00:35 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
 <item>
 <guid>
-http://blogawesome.com/posts/2016-07-24-datomic-wab-app-a-practical-guide.html
+http://blogawesome.com/posts/2016-07-24-datomic-web-app-a-practical-guide.html
 </guid>
 <link>
-http://blogawesome.com/posts/2016-07-24-datomic-wab-app-a-practical-guide.html
+http://blogawesome.com/posts/2016-07-24-datomic-web-app-a-practical-guide.html
 </link>
 <title>
 Using Datomic in your app: a practical guide
