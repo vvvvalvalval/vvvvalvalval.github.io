@@ -1,28 +1,28 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <rss version='2.0' xmlns:atom='http://www.w3.org/2005/Atom'>
 <channel>
-<atom:link href='http://blogawesome.com/' rel='self' type='application/rss+xml'/>
+<atom:link href='http://vvvvalvalval.github.io/' rel='self' type='application/rss+xml'/>
 <title>
 Val on Programming
 </title>
 <link>
-http://blogawesome.com/
+http://vvvvalvalval.github.io/
 </link>
 <description>
-This blog is awesome
+
 </description>
 <lastBuildDate>
-Sun, 09 Jul 2017 16:05:47 +0200
+Mon, 10 Jul 2017 22:37:27 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
 <item>
 <guid>
-http://blogawesome.com/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html
+http://vvvvalvalval.github.io/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html
 </guid>
 <link>
-http://blogawesome.com/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html
+http://vvvvalvalval.github.io/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html
 </link>
 <title>
 Datomic: this is not the history you're looking for
@@ -90,10 +90,10 @@ Sat, 08 Jul 2017 00:00:00 +0200
 </item>
 <item>
 <guid>
-http://blogawesome.com/posts/2016-07-24-datomic-web-app-a-practical-guide.html
+http://vvvvalvalval.github.io/posts/2016-07-24-datomic-web-app-a-practical-guide.html
 </guid>
 <link>
-http://blogawesome.com/posts/2016-07-24-datomic-web-app-a-practical-guide.html
+http://vvvvalvalval.github.io/posts/2016-07-24-datomic-web-app-a-practical-guide.html
 </link>
 <title>
 Using Datomic in your app: a practical guide
@@ -307,10 +307,10 @@ Sun, 24 Jul 2016 00:00:00 +0200
 </item>
 <item>
 <guid>
-http://blogawesome.com/posts/2016-01-03-architecture-datomic-branching-reality.html
+http://vvvvalvalval.github.io/posts/2016-01-03-architecture-datomic-branching-reality.html
 </guid>
 <link>
-http://blogawesome.com/posts/2016-01-03-architecture-datomic-branching-reality.html
+http://vvvvalvalval.github.io/posts/2016-01-03-architecture-datomic-branching-reality.html
 </link>
 <title>
 Application architecture with Datomic: branching reality
@@ -438,10 +438,10 @@ Sun, 03 Jan 2016 00:00:00 +0100
 </item>
 <item>
 <guid>
-http://blogawesome.com/posts/2015-09-16-bottup-approach-to-reagent-state.html
+http://vvvvalvalval.github.io/posts/2015-09-16-bottup-approach-to-reagent-state.html
 </guid>
 <link>
-http://blogawesome.com/posts/2015-09-16-bottup-approach-to-reagent-state.html
+http://vvvvalvalval.github.io/posts/2015-09-16-bottup-approach-to-reagent-state.html
 </link>
 <title>
 A bottom-up approach to state in Reagent
@@ -595,10 +595,10 @@ Wed, 16 Sep 2015 00:00:00 +0200
 </item>
 <item>
 <guid>
-http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
+http://vvvvalvalval.github.io/posts/2015-09-06-productive-git-setup.html
 </guid>
 <link>
-http://blogawesome.com/posts/2015-09-06-productive-git-setup.html
+http://vvvvalvalval.github.io/posts/2015-09-06-productive-git-setup.html
 </link>
 <title>
 Productive Git setup
@@ -633,10 +633,10 @@ Sun, 06 Sep 2015 00:00:00 +0200
 </item>
 <item>
 <guid>
-http://blogawesome.com/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
+http://vvvvalvalval.github.io/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
 </guid>
 <link>
-http://blogawesome.com/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
+http://vvvvalvalval.github.io/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
 </link>
 <title>
 Having a good terminal console on OS X in 2015
