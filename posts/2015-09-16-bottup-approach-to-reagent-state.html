@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
     <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
     <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
-    <link href="../css/screen.css" rel="stylesheet" type="text/css" />
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
 </head>
 <body>
 
@@ -59,8 +59,8 @@
     <h2>A bottom-up approach to state in Reagent</h2>
 </div>
 <div>
-    <ol class="contents"><li><a href="#tl;dr">TL;DR</a></li><li><a href="#rationale">Rationale</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#the_traditional_approach_to_local-state_in_reagent">The traditional approach to local-state in Reagent</a></li><li><a href="#strategy">Strategy</a></li><li><a href="#example">Example</a></li><ol><li><a href="#the_traditional_way:_with_old_fashioned_locals">The traditional way: with old fashioned locals</a></li><li><a href="#the_new_way:_with_managed_cursors">The new way: with managed cursors</a></li><li><a href="#making_it_reloadable">Making it reloadable</a></li><li><a href="#making_it_less_tedious:_pluggable_components">Making it less tedious: pluggable components</a></li></ol><li><a href="#wrapping_up">Wrapping up</a></li></ol>
-    <p>In this post, I'll present an alternative way of managing state in Reagent applications to what is currently made popular by libraries like <a href='https://github.com/Day8/re-frame'>Re-frame</a>.</p><h2><a name="tl;dr"></a>TL;DR</h2><p>We'll be able to declare 'local state' inside our Reagent components, which feels like ephemeral local atoms but is accessible globally and is Figwheel-reloadable.</p><p><strong>End result</strong> : <iframe src="https://player.vimeo.com/video/139510973" width="100%" height="330" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></p><p>(watch it in HD <a href="https://vimeo.com/139510973" target="_blank">here</a>)</p><h2><a name="rationale"></a>Rationale</h2><p>From what I have seen, the currently most popular approach to state management in Reagent applications is to have one global Reactive Atom and to centralize the behaviour for updating this Ratom.</p><p>I completely agree that this approach is very sound for a large space of applications; it also has the advantage of making your code <a href='https://github.com/bhauman/lein-figwheel#writing-reloadable-code'>Figwheel-reloadable</a> out of the box.</p><p>However, I do believe this approach has its limitations. Basing everything on a global ratom encourages your components to leverage a lot of context, making them less 'portable'. More importantly, I find this forces you to have a top-down approach to state management: you need to design the whole schema for your app state, and account for everything that could happen to it from the very start.</p><p>Sometimes, I feel I do not want this. Instead, I want my components to behave not as partial views of some global state, but as 'micro-applications', managing their own state instead of deferring this to some global decision maker. I like the idea that my components are autonomous, and can just be plugged into their parents without much knowledge of their context. This is what I call a <em>bottom-up</em> approach to state management. <span class="sn">This is about the only way of doing things in libraries like AngularJS, in which directives just have local state and are meant to be autonomous. What I find great in Reagent is that I can combine both approaches.</span></p><p>In this post, I'll present a way of achieving this, while retaining some of the great benefits of the top-down approach.</p><h2><a name="requirements"></a>Requirements</h2><p>Our goal is to abide by the following requirements :</p><ol><li>We want to make Reagent components with local state. In particular, the lifecycle of this local state is bound to the lifecycle of the component: it gets initialized when the component mounts, it gets cleaned up when the component unmounts.</li><li>We want this local state managed by the component, not externally</li><li>This 'local state' is actually perceptible from the global Reactive Atom of our app. This way, our system has the 'all state in one place' property, a.k.a 'email me your state and I'll see exactly what you see'.</li><li>This local state is <em>reloadable</em>, i.e when we are developing with Figwheel, we don't have to re-create this state each time we make a code change.</li></ol><h2><a name="the&#95;traditional&#95;approach&#95;to&#95;local-state&#95;in&#95;reagent"></a>The traditional approach to local-state in Reagent</h2><p>As we can learn from the <a href='https://reagent-project.github.io/'>project page</a>, the traditional way of making components with local state is as follows:</p><ul><li>instead of writing a rendering function, you write a 'wrapper' function which <em>returns</em> a rendering function.</li><li>the 'wrapper' function initializes some local state in the form of ratoms stored in locals of the wrapper function</li><li>the rendering function just closes over these locals and uses them.</li></ul><p>This is all very neat and intuitive, but it does not quite comply to our requirements : it's not reachable from our global state ratom, and it's not figwheel-reloadable.</p><h2><a name="strategy"></a>Strategy</h2><p>Here is how we'll implement this :</p><ul><li>we still have a unique global ratom, which will hold <em>all the state</em> of the application (including component-local state)</li><li>instead of creating local ratoms, stateful components will be handed a 'location' (a Cursor) in the global state where to put their local state.</li><li>they will initialize this local state when they mount, and clean it when they unmount</li><li>we'll also need some tricks to make this robust to figwheel code reloads.</li></ul><h2><a name="example"></a>Example</h2><p>I'll demonstrate this with a very poor, ugly version of TODO MVC.</p><p>Let's first lay out the 'model' of our app:</p><pre><code class="clojure">&#40;require '&#91;reagent.core :as r&#93;&#41;
+    <ol class="content"><li><a href="#tl;dr">TL;DR</a></li><li><a href="#rationale">Rationale</a></li><li><a href="#requirements">Requirements</a></li><li><a href="#the_traditional_approach_to_local-state_in_reagent">The traditional approach to local-state in Reagent</a></li><li><a href="#strategy">Strategy</a></li><li><a href="#example">Example</a></li><ol><li><a href="#the_traditional_way:_with_old_fashioned_locals">The traditional way: with old fashioned locals</a></li><li><a href="#the_new_way:_with_managed_cursors">The new way: with managed cursors</a></li><li><a href="#making_it_reloadable">Making it reloadable</a></li><li><a href="#making_it_less_tedious:_pluggable_components">Making it less tedious: pluggable components</a></li></ol><li><a href="#wrapping_up">Wrapping up</a></li></ol>
+    <p>In this post, I'll present an alternative way of managing state in Reagent applications to what is currently made popular by libraries like <a href='https://github.com/Day8/re-frame'>Re-frame</a>.</p><h2 id="tl;dr">TL;DR</h2><p>We'll be able to declare 'local state' inside our Reagent components, which feels like ephemeral local atoms but is accessible globally and is Figwheel-reloadable.</p><p><strong>End result</strong> : <iframe src="https://player.vimeo.com/video/139510973" width="100%" height="330" frameborder="0" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe></p><p>(watch it in HD <a href="https://vimeo.com/139510973" target="_blank">here</a>)</p><h2 id="rationale">Rationale</h2><p>From what I have seen, the currently most popular approach to state management in Reagent applications is to have one global Reactive Atom and to centralize the behaviour for updating this Ratom.</p><p>I completely agree that this approach is very sound for a large space of applications; it also has the advantage of making your code <a href='https://github.com/bhauman/lein-figwheel#writing-reloadable-code'>Figwheel-reloadable</a> out of the box.</p><p>However, I do believe this approach has its limitations. Basing everything on a global ratom encourages your components to leverage a lot of context, making them less 'portable'. More importantly, I find this forces you to have a top-down approach to state management: you need to design the whole schema for your app state, and account for everything that could happen to it from the very start.</p><p>Sometimes, I feel I do not want this. Instead, I want my components to behave not as partial views of some global state, but as 'micro-applications', managing their own state instead of deferring this to some global decision maker. I like the idea that my components are autonomous, and can just be plugged into their parents without much knowledge of their context. This is what I call a <em>bottom-up</em> approach to state management. <span class="sn">This is about the only way of doing things in libraries like AngularJS, in which directives just have local state and are meant to be autonomous. What I find great in Reagent is that I can combine both approaches.</span></p><p>In this post, I'll present a way of achieving this, while retaining some of the great benefits of the top-down approach.</p><h2 id="requirements">Requirements</h2><p>Our goal is to abide by the following requirements :</p><ol><li>We want to make Reagent components with local state. In particular, the lifecycle of this local state is bound to the lifecycle of the component: it gets initialized when the component mounts, it gets cleaned up when the component unmounts.</li><li>We want this local state managed by the component, not externally</li><li>This 'local state' is actually perceptible from the global Reactive Atom of our app. This way, our system has the 'all state in one place' property, a.k.a 'email me your state and I'll see exactly what you see'.</li><li>This local state is <em>reloadable</em>, i.e when we are developing with Figwheel, we don't have to re-create this state each time we make a code change.</li></ol><h2 id="the&#95;traditional&#95;approach&#95;to&#95;local-state&#95;in&#95;reagent">The traditional approach to local-state in Reagent</h2><p>As we can learn from the <a href='https://reagent-project.github.io/'>project page</a>, the traditional way of making components with local state is as follows:</p><ul><li>instead of writing a rendering function, you write a 'wrapper' function which <em>returns</em> a rendering function.</li><li>the 'wrapper' function initializes some local state in the form of ratoms stored in locals of the wrapper function</li><li>the rendering function just closes over these locals and uses them.</li></ul><p>This is all very neat and intuitive, but it does not quite comply to our requirements : it's not reachable from our global state ratom, and it's not figwheel-reloadable.</p><h2 id="strategy">Strategy</h2><p>Here is how we'll implement this :</p><ul><li>we still have a unique global ratom, which will hold <em>all the state</em> of the application (including component-local state)</li><li>instead of creating local ratoms, stateful components will be handed a 'location' (a Cursor) in the global state where to put their local state.</li><li>they will initialize this local state when they mount, and clean it when they unmount</li><li>we'll also need some tricks to make this robust to figwheel code reloads.</li></ul><h2 id="example">Example</h2><p>I'll demonstrate this with a very poor, ugly version of TODO MVC.</p><p>Let's first lay out the 'model' of our app:</p><pre><code class="clojure">&#40;require '&#91;reagent.core :as r&#93;&#41;
 
 ;; this atom holds the global state, we use `defonce` to make it reloadable
 &#40;defonce todo-state-atom &#40;r/atom {:todos &#91;&#93;}&#41;&#41;
@@ -78,7 +78,7 @@
 &#40;defn update-todo &#91;todo-state {:keys &#91;id&#93; :as todo}&#93;
   &#40;update todo-state :todos &#40;fn &#91;todos&#93; &#40;-&gt;&gt; todos &#40;map #&#40;if &#40;= &#40;:id %&#41; id&#41; todo %&#41;&#41; vec&#41;&#41;&#41;&#41;
 
-</code></pre><p>Now, let's see how to implement the view.</p><h3><a name="the&#95;traditional&#95;way:&#95;with&#95;old&#95;fashioned&#95;locals"></a>The traditional way: with old fashioned locals</h3><p>As a reference for comparison, we'll start by implementing it the 'traditional' Reagent way : with local ratoms to hold the local state.</p><pre><code class="clojure">;; ... and here's our UI :
+</code></pre><p>Now, let's see how to implement the view.</p><h3 id="the&#95;traditional&#95;way:&#95;with&#95;old&#95;fashioned&#95;locals">The traditional way: with old fashioned locals</h3><p>As a reference for comparison, we'll start by implementing it the 'traditional' Reagent way : with local ratoms to hold the local state.</p><pre><code class="clojure">;; ... and here's our UI :
 &#40;declare &lt;todos-list&gt; &lt;todo-item&gt;&#41;
 
 &#40;defn &lt;todos-list&gt; &#91;&#93;
@@ -109,7 +109,7 @@
          &#91;:button {:on-click #&#40;swap! local-state assoc :editing true&#41;} &quot;Edit&quot;&#93;
          &#91;:button {:on-click #&#40;delete-me! todo&#41;} &quot;Remove&quot;&#93;&#93;&#41;
       &#41;&#41;&#41;
-</code></pre><p>This is the most straightforward way of doing things, but as we said earlier, it does not yield an optimal result: the local state is not reachable from the global atom, not does it survive code reloads. Let's make this better.</p><h3><a name="the&#95;new&#95;way:&#95;with&#95;managed&#95;cursors"></a>The new way: with managed cursors</h3><p>We'll store the local state in cursors of the global ratom, instead of ratoms stored in locals.</p><p>Of course, now that we're not using locals, we can no longer rely on garbage collection to clean up after us, so we have to do it explicitly using lifecycle methods.</p><pre><code class="clojure">;; in this cursor, we'll put the local state of each list item
+</code></pre><p>This is the most straightforward way of doing things, but as we said earlier, it does not yield an optimal result: the local state is not reachable from the global atom, not does it survive code reloads. Let's make this better.</p><h3 id="the&#95;new&#95;way:&#95;with&#95;managed&#95;cursors">The new way: with managed cursors</h3><p>We'll store the local state in cursors of the global ratom, instead of ratoms stored in locals.</p><p>Of course, now that we're not using locals, we can no longer rely on garbage collection to clean up after us, so we have to do it explicitly using lifecycle methods.</p><pre><code class="clojure">;; in this cursor, we'll put the local state of each list item
 &#40;defonce todos-state-cursor &#40;r/cursor todo-state-atom &#91;:todo-state&#93;&#41;&#41;
 
 &#40;declare &lt;todos-list&gt; &lt;todo-item&gt; &lt;todo-item-plugged&gt;&#41;
@@ -147,7 +147,7 @@
             &#91;:button {:on-click #&#40;swap! local-state-cursor assoc :editing true&#41;} &quot;Edit&quot;&#93;
             &#91;:button {:on-click #&#40;delete-me! todo&#41;} &quot;Remove&quot;&#93;&#93;&#41;
          &#41;}&#41;&#41;&#41;
-</code></pre><p>We have now full visibility of the whole state of our app, and can manipulate all of it using the REPL. This is a big improvement.</p><p>However, we haven't achieved reloadability yet. Let's see how it goes.</p><h3><a name="making&#95;it&#95;reloadable"></a>Making it reloadable</h3><p>This is kind of tricky.</p><p>In order to reload the code, our app has to be re-mounted into the DOM on each code reload. I'm using the <a href='https://github.com/bhauman/figwheel-template'>figwheel Leiningen template</a>, which does it by calling a <code>mount-root</code> function on each reload :</p><pre><code class="clojure">&#40;defn mount-root &#91;&#93;
+</code></pre><p>We have now full visibility of the whole state of our app, and can manipulate all of it using the REPL. This is a big improvement.</p><p>However, we haven't achieved reloadability yet. Let's see how it goes.</p><h3 id="making&#95;it&#95;reloadable">Making it reloadable</h3><p>This is kind of tricky.</p><p>In order to reload the code, our app has to be re-mounted into the DOM on each code reload. I'm using the <a href='https://github.com/bhauman/figwheel-template'>figwheel Leiningen template</a>, which does it by calling a <code>mount-root</code> function on each reload :</p><pre><code class="clojure">&#40;defn mount-root &#91;&#93;
   &#40;r/render &#91;&lt;todos-list&gt;&#93; &#40;.getElementById js/document &quot;app&quot;&#41;&#41;&#41;
 </code></pre><p>The problem is, each time a new version gets mounted, the old version gets unmounted. As a consequence, the <code>:component-will-unmount</code> function we defined above is called, and diligently erases our local state.</p><p>We need to find a way of informing our component that the unmounting is caused by a Figwheel reload, so that it does not erase its state. This is made harder by the fact that mounting happens asynchronously.</p><p>The best way I've found is to set up a flag when the reloading happens, and leave it up long enough that the DOM can mount :</p><pre><code class="clojure">&#40;defonce reloading-state &#40;atom false&#41;&#41; ;; note that we're using a regular atom: the whole point is not to interfere with Reagent here.
 
@@ -169,7 +169,7 @@
                                          &#40;swap! parent-atom dissoc id&#41;&#41;&#41;
         ;; ...
        &#41;
-</code></pre><p>To be honest, I'm not very proud of it, but it works; and given that it only affects our development environment, I don't feel too worried using this little hack.</p><h3><a name="making&#95;it&#95;less&#95;tedious:&#95;pluggable&#95;components"></a>Making it less tedious: pluggable components</h3><p>This is great, but it's a pity that we have to resort to lifecycle methods and explicit calls to our <code>&#40;reloading?&#41;</code> hack every time we want a component with local state, especially since we're using Reagent, which usually excels as hiding away this sort of things.</p><p>Fortunately, we can make it more practical. A few weeks ago, I experimented with the concept of so-called (by me) <a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc'>&#42;pluggable components&#42;</a>,  which are a way of writing stateful components which have a cleanup phase without writing the same 'lifecyle methods recipes' over and over again.</p><p>I won't detail how it works here (although there's <a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc/blob/master/src/cljs/reagent&#95;plug/core.cljs#L13'>not much</a> to it), but basically here's the amount of work it takes :</p><p>We first define a 'managed cursor' recipe, which encapsulates the 'local cursor lifecycle' logic we coded above :</p><pre><code class="clojure">&#40;defmethod make-plug ::r/managed-cursor &#91;&#91;&#95;&#93; &#91;parent-ratom key&#93;&#93;
+</code></pre><p>To be honest, I'm not very proud of it, but it works; and given that it only affects our development environment, I don't feel too worried using this little hack.</p><h3 id="making&#95;it&#95;less&#95;tedious:&#95;pluggable&#95;components">Making it less tedious: pluggable components</h3><p>This is great, but it's a pity that we have to resort to lifecycle methods and explicit calls to our <code>&#40;reloading?&#41;</code> hack every time we want a component with local state, especially since we're using Reagent, which usually excels as hiding away this sort of things.</p><p>Fortunately, we can make it more practical. A few weeks ago, I experimented with the concept of so-called (by me) <a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc'><em>pluggable components</em></a>,  which are a way of writing stateful components which have a cleanup phase without writing the same 'lifecyle methods recipes' over and over again.</p><p>I won't detail how it works here (although there's <a href='https://github.com/vvvvalvalval/reagent-pluggable-components-poc/blob/master/src/cljs/reagent_plug/core.cljs#L13'>not much</a> to it), but basically here's the amount of work it takes :</p><p>We first define a 'managed cursor' recipe, which encapsulates the 'local cursor lifecycle' logic we coded above :</p><pre><code class="clojure">&#40;defmethod make-plug ::r/managed-cursor &#91;&#91;&#95;&#93; &#91;parent-ratom key&#93;&#93;
   &#40;let &#91;curs &#40;r/cursor parent-ratom &#91;key&#93;&#41;&#93;
     &#40;-&gt;Plug curs #&#40;do nil&#41; #&#40;when-not &#40;reloading?&#41; &#40;swap! parent-ratom dissoc key&#41;&#41;&#41;&#41;&#41;
 </code></pre><p>From now on, we'll be able to reuse this recipe for any stateful component. Let's see how that goes for <code>&lt;todo-item&gt;</code> :</p><pre><code class="clojure">&#40;defn &lt;todos-list&gt; &#91;&#93;
@@ -200,17 +200,17 @@
        &#91;:button.btn.btn-primary {:on-click #&#40;swap! local-state-cursor assoc :editing true&#41;} &quot;Edit&quot;&#93; &quot; &quot;
        &#91;:button.btn.btn-danger {:on-click #&#40;delete-me! todo&#41;} &quot;Remove&quot;&#93;&#93;&#41;
     &#41;&#41;
-</code></pre><p>It's now as lightweight as we'd expect of Reagent!</p><h2><a name="wrapping&#95;up"></a>Wrapping up</h2><p>I'm very excited about the possibilities of this. We can now have state that feels local, while being reachable and reloadable, with the huge benefits that come with it. Of course, this concept still has to be proven, and this implementation may be suboptimal.</p><p>We're getting <a href='https://www.youtube.com/watch?v=PUv66718DII'>there</a>!</p>
+</code></pre><p>It's now as lightweight as we'd expect of Reagent!</p><h2 id="wrapping&#95;up">Wrapping up</h2><p>I'm very excited about the possibilities of this. We can now have state that feels local, while being reachable and reloadable, with the huge benefits that come with it. Of course, this concept still has to be proven, and this implementation may be suboptimal.</p><p>We're getting <a href='https://www.youtube.com/watch?v=PUv66718DII'>there</a>!</p>
 </div>
 
 <div id="post-tags">
     <b>Tags: </b>
     
-    <a href="/tags/Reagent.html">Reagent</a>
+    <a href="/Reagent.html">Reagent</a>
     
-    <a href="/tags/Clojure.html">Clojure</a>
+    <a href="/Clojure.html">Clojure</a>
     
-    <a href="/tags/Architecture.html">Architecture</a>
+    <a href="/Architecture.html">Architecture</a>
     
 </div>
 
@@ -252,6 +252,8 @@
                     <h3>Recent Posts</h3>
                     <ul>
                         
+                        <li><a href="/posts/what-makes-a-good-repl.html">What makes a good REPL?</a></li>
+                        
                         <li><a href="/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html">Datomic: this is not the history you&#39;re looking for</a></li>
                         
                         <li><a href="/posts/2016-07-24-datomic-web-app-a-practical-guide.html">Using Datomic in your app: a practical guide</a></li>
@@ -259,8 +261,6 @@
                         <li><a href="/posts/2016-01-03-architecture-datomic-branching-reality.html">Application architecture with Datomic: branching reality</a></li>
                         
                         <li><a href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">A bottom-up approach to state in Reagent</a></li>
-                        
-                        <li><a href="/posts/2015-09-06-productive-git-setup.html">Productive Git setup</a></li>
                         
                     </ul>
                 </div>
@@ -270,17 +270,19 @@
                     <h3>Tags</h3>
                     <ul>
                         
-                        <li><a href="/tags/Architecture.html">Architecture</a></li>
+                        <li><a href="/Programming.html">Programming</a></li>
                         
-                        <li><a href="/tags/Datomic.html">Datomic</a></li>
+                        <li><a href="/Architecture.html">Architecture</a></li>
                         
-                        <li><a href="/tags/Clojure.html">Clojure</a></li>
+                        <li><a href="/Datomic.html">Datomic</a></li>
                         
-                        <li><a href="/tags/Reagent.html">Reagent</a></li>
+                        <li><a href="/Clojure.html">Clojure</a></li>
                         
-                        <li><a href="/tags/tools.html">tools</a></li>
+                        <li><a href="/Reagent.html">Reagent</a></li>
                         
-                        <li><a href="/tags/tutorial.html">tutorial</a></li>
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
                         
                     </ul>
                 </div>
@@ -293,8 +295,8 @@
 </div>
 <script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
 <script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
-<script src="../js/highlight.pack.js" type="text/javascript"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
 <script>hljs.initHighlightingOnLoad();</script>
-<script src="../js/custom.js" type="text/javascript"></script>
+<script src="/js/custom.js" type="text/javascript"></script>
 </body>
 </html>
