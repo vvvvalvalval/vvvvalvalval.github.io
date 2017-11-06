@@ -12,11 +12,160 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Mon, 28 Aug 2017 10:11:45 +0200
+Mon, 06 Nov 2017 11:16:19 +0100
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/using-postgresql-temporary-views-for-expressing-business-logic.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/using-postgresql-temporary-views-for-expressing-business-logic.html
+</link>
+<title>
+Using PostgreSQL temporary views for expressing business logic
+</title>
+<description>
+&lt;p&gt;I recently worked on a project which consisted of merging related data exports from a variety of sources and extracting  accounting information from them. Because the problem was inherently very relational, I was naturally led to use an SQL  database in the project (in this case PostgreSQL).&lt;/p&gt;&lt;p&gt;I ended up expressing much more of the business logic than I thought using pure SQL - more precisely, &lt;i&gt;temporary SQL Views&lt;/i&gt; -  so I thought I'd share my findings here.&lt;/p&gt;&lt;h2 id=&quot;why&amp;#95;sql?&quot;&gt;Why SQL?&lt;/h2&gt;&lt;p&gt;A lot of programmers think of SQL merely as a protocol for interacting with data storage, and prefer to express  domain logic in a general-purpose language (JavaScript, Ruby, C#, ...). It's a shame, because SQL is actually very expressive!  When applied to business logic, SQL can make for programs that are not only more concise and readable, but also more &lt;strong&gt;declarative&lt;/strong&gt;  (that is, programs that express only their intent, not how to achieve it) which is a very effective way of eliminating  &lt;a href='https://github.com/papers-we-love/papers-we-love/blob/master/design/out-of-the-tar-pit.pdf'&gt;accidental complexity&lt;/a&gt; from your code.&lt;/p&gt;&lt;p&gt;More concretely, I believe the advantages of SQL come from:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;relations being &lt;strong&gt;more powerful data abstractions&lt;/strong&gt; than the ones available in general-purpose languages (arrays, structs, maps, lists, objects etc.)&lt;/li&gt;&lt;li&gt;the fact that the data is centralized and &lt;i&gt;at hand&lt;/i&gt; eliminates many difficult concerns associated with moving data (encoding and packaging the data, validation, distributed systems issues etc.)&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Modern SQL engines such as &lt;a href='https://www.postgresql.org/'&gt;PostgreSQL&lt;/a&gt; also offer several practical benefits:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;they provide an &lt;strong&gt;interactive&lt;/strong&gt; programming environment&lt;/li&gt;&lt;li&gt;they come with an expressive, yet relatively flexible &lt;strong&gt;static type system&lt;/strong&gt;&lt;/li&gt;&lt;li&gt;they achieve quite good &lt;strong&gt;performance&lt;/strong&gt; for the level of abstraction for which you typically use them&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Finally, SQL is very &lt;strong&gt;portable&lt;/strong&gt;. SQL is much more universally known that JavaScript / Ruby / C# / etc., which means SQL  code is more accessible and reusable. Fun fact: this was quite useful for the data processing project I mentioned. For  reasons inherent to the company, it had to be shipped in PHP, but since PHP makes for a poor experimental environment for  data manipulation, I did the 'exploratory' phase of the project in Clojure then migrated it to PHP. Because most of the advanced  logic was expressed in SQL, I was able to do the migration without too much effort, while having explored the domain with  a fast feedback loop.&lt;/p&gt;&lt;h2 id=&quot;why&amp;#95;sql&amp;#95;views?&quot;&gt;Why SQL views?&lt;/h2&gt;&lt;p&gt;&lt;a href='https://www.postgresql.org/docs/current/static/sql-createview.html'&gt;SQL views&lt;/a&gt; are the primary mechanism for abstraction in SQL, playing a similar  role to functions in procedural languages, or methods in class-based languages:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;they factor our repetition, by replacing an SQL expression with a name&lt;/li&gt;&lt;li&gt;they hide implementation details: code that calls a view only knows the shape of the data, not how it is computed&lt;/li&gt;&lt;li&gt;they provide a level of indirection between how data is stored and how it is queried&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;So SQL views are quite effective; however, the fact that they're stored durably by default brings several operational problems.  This is where &lt;strong&gt;temporary views&lt;/strong&gt; come in, as we'll see in the next section.&lt;/p&gt;&lt;h3 id=&quot;example:&amp;#95;e-commerce&amp;#95;cash&amp;#95;flow&quot;&gt;Example: e-commerce cash flow&lt;/h3&gt;&lt;p&gt;As an example, imagine you have to compute the cash flow of an e-commerce company. Here are the business requirements:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;The company receives money via Orders: each Order consists of several Line Items, each Line Item being a certain quantity of a Product&lt;/li&gt;&lt;li&gt;The company spends money via Purchases&lt;/li&gt;&lt;li&gt;The cash flow consists of the Cash Movements corresponding to Orders and Purchases&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;This can be expressed with the following SQL:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;CREATE VIEW orders&amp;#95;cash&amp;#95;movements AS &amp;#40;
+  SELECT
+    order&amp;#95;id,
+    order&amp;#95;time AS cash&amp;#95;movement&amp;#95;time,
+    SUM&amp;#40;li&amp;#95;amount&amp;#41; AS cash&amp;#95;movement&amp;#95;amount
+  FROM &amp;#40;
+    SELECT
+      o.order&amp;#95;id,
+      o.order&amp;#95;time,
+      &amp;#40;li.line&amp;#95;item&amp;#95;quantity &amp;#42; p.product&amp;#95;price&amp;#41; AS li&amp;#95;amount
+    FROM orders o
+    JOIN line&amp;#95;items li ON li.order&amp;#95;id = o.order&amp;#95;id
+    JOIN products p ON li.product&amp;#95;id = p.product&amp;#95;id
+  &amp;#41; AS li
+  GROUP BY order&amp;#95;id, order&amp;#95;time
+&amp;#41;;
+
+CREATE VIEW purchases&amp;#95;cash&amp;#95;movements AS &amp;#40;
+  SELECT
+    purchase&amp;#95;id,
+    purchase&amp;#95;time AS cash&amp;#95;movement&amp;#95;time,
+    &amp;#40;-1 &amp;#42; purchase&amp;#95;amount&amp;#41; AS cash&amp;#95;movement&amp;#95;amount
+  FROM purchases
+&amp;#41;;
+
+CREATE VIEW cash&amp;#95;movements AS &amp;#40;
+  SELECT cash&amp;#95;movement&amp;#95;time, cash&amp;#95;movement&amp;#95;amount FROM orders&amp;#95;cash&amp;#95;movements
+  UNION ALL
+  SELECT cash&amp;#95;movement&amp;#95;time, cash&amp;#95;movement&amp;#95;amount FROM purchases&amp;#95;cash&amp;#95;movements
+&amp;#41;;
+
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&quot;why&amp;#95;temporary&amp;#95;views?&quot;&gt;Why temporary views?&lt;/h2&gt;&lt;h3 id=&quot;durable&amp;#95;information,&amp;#95;ephemeral&amp;#95;logic&quot;&gt;Durable information, ephemeral logic&lt;/h3&gt;&lt;p&gt;Let's go back to the basics: an &lt;i&gt;information system&lt;/i&gt; consists of:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;information&lt;/strong&gt;&lt;/li&gt;&lt;li&gt;&lt;strong&gt;business logic&lt;/strong&gt; processing this information&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;We usually want information to be &lt;strong&gt;stored durably&lt;/strong&gt;, because we don't want to lose any of it.&lt;/p&gt;&lt;p&gt;On the other hand, we typically &lt;strong&gt;don't want to commit durably to our business logic&lt;/strong&gt;; we want to be able to change our minds  about how our business logic handles information (because we made a bug, because business requirements changed, etc.)&lt;/p&gt;&lt;p&gt;This is why information systems are traditionally made of a durable database storing raw information, and processes executing  business-logic code in an ephemeral way (usually written in languages such as JavaScript / C# / Ruby / etc.)&lt;/p&gt;&lt;h3 id=&quot;the&amp;#95;problem&amp;#95;with&amp;#95;stored&amp;#95;sql&amp;#95;views&quot;&gt;The problem with stored SQL views&lt;/h3&gt;&lt;p&gt;The problem with ordinary SQL views is that they don't have this 'ephemeral' property: if you want to change the logic of  an SQL view, you have to make a database migration, which will affect all the database clients at the same time, making it  difficult to manage operationally. For many applications, this operational overhead is a deal breaker for using SQL views.&lt;/p&gt;&lt;h3 id=&quot;temporary&amp;#95;views&amp;#95;to&amp;#95;the&amp;#95;rescue!&quot;&gt;TEMPORARY views to the rescue!&lt;/h3&gt;&lt;p&gt;This is why &lt;a href='https://www.postgresql.org/docs/current/static/sql-createview.html'&gt;&lt;strong&gt;temporary&lt;/strong&gt; SQL views&lt;/a&gt; are useful.  A temporary SQL view is scoped to an SQL session, which means that both its visibility and its lifecycle will be limited  to a single database client.&lt;/p&gt;&lt;h3 id=&quot;how&amp;#95;do&amp;#95;you&amp;#95;use&amp;#95;temporary&amp;#95;views?&quot;&gt;How do you use temporary views?&lt;/h3&gt;&lt;p&gt;You define a temporary view in SQL code by adding the TEMPORARY keyword to the CREATE VIEW command.  Continuing with our cash flow example:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;CREATE TEMPORARY VIEW orders&amp;#95;cash&amp;#95;movements AS &amp;#40;
+  -- &amp;#91;...&amp;#93;
+&amp;#41;;
+
+CREATE TEMPORARY VIEW purchases&amp;#95;cash&amp;#95;movements AS &amp;#40;
+  -- &amp;#91;...&amp;#93;
+&amp;#41;;
+
+CREATE TEMPORARY VIEW cash&amp;#95;movements AS &amp;#40;
+  -- &amp;#91;...&amp;#93;
+&amp;#41;;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;These &lt;code&gt;CREATE TEMPORARY VIEW&lt;/code&gt; commands should be executed once each time a database connection is created.  Modern SQL connection pooling libraries can be configured to execute an SQL statement each time a connection is created;  for instance, for the &lt;a href='https://github.com/brettwooldridge/HikariCP'&gt;HikariCP&lt;/a&gt; library,  this is the done via the &lt;code&gt;connectionInitSql&lt;/code&gt; option.&lt;/p&gt;&lt;h3 id=&quot;caching&amp;#95;without&amp;#95;materialized&amp;#95;views&quot;&gt;Caching without Materialized Views&lt;/h3&gt;&lt;p&gt;A popular strategy for caching with PostgreSQL is to use &lt;a href='https://www.postgresql.org/docs/current/static/rules-materializedviews.html'&gt;Materialized Views&lt;/a&gt;.  For instance, we could use a Materialized View to cache our cash flow computation example:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;-- WON'T WORK
+
+-- defining the materialized view
+CREATE MATERIALIZED VIEW cash&amp;#95;flow&amp;#95;cache&amp;#95;v0 AS &amp;#40;
+  SELECT &amp;#42; FROM cash&amp;#95;movements;
+&amp;#41;;
+
+-- &amp;#91;...&amp;#93;
+
+-- refreshing the materialized view
+REFRESH MATERIALIZED VIEW cash&amp;#95;flow&amp;#95;cache&amp;#95;v0;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This won't work, because a PostgreSQL Materialized View is a durable object, whereas a Temporary View is a temporary object;  therefore, a Materialized View cannot depend on a Temporary View.&lt;/p&gt;&lt;p&gt;One way to circumvent this limitation is to define only the schema for the cache table, and let the client refresh the caching  table with a plain old query:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;-- defining the cache table
+CREATE TABLE cash&amp;#95;flow&amp;#95;cache&amp;#95;v0 &amp;#40;
+  cash&amp;#95;movement&amp;#95;time TIMESTAMP,
+  cash&amp;#95;movement&amp;#95;amount INTEGER
+&amp;#41;;
+
+-- &amp;#91;...&amp;#93;
+
+-- refreshing the cache table
+-- &amp;#40;preferrable to do this in a transaction&amp;#41;
+
+TRUNCATE TABLE cash&amp;#95;flow&amp;#95;cache&amp;#95;v0;
+INSERT INTO cash&amp;#95;flow&amp;#95;cache&amp;#95;v0 &amp;#40;cash&amp;#95;movement&amp;#95;time, cash&amp;#95;movement&amp;#95;amount&amp;#41;
+  SELECT cash&amp;#95;movement&amp;#95;time, cash&amp;#95;movement&amp;#95;amount FROM cash&amp;#95;movements;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;This has the advantage of minimizing the amount of business logic that we need to put in our stored caching code.&lt;/p&gt;&lt;h2 id=&quot;what's&amp;#95;missing:&amp;#95;'parameterized'&amp;#95;temporary&amp;#95;views&quot;&gt;What's missing: 'parameterized' temporary views&lt;/h2&gt;&lt;p&gt;One thing I've found to be lacking in SQL is the ability to define views that are parameterized with other values -  in particular, parameterized with other relations.&lt;/p&gt;&lt;p&gt;For instance, going back to our cash flow example, imagine we want to compute the following aggregations:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;revenue per day&lt;/li&gt;&lt;li&gt;expenses per day&lt;/li&gt;&lt;li&gt;total cash flow per day&lt;/li&gt;&lt;/ul&gt;&lt;pre&gt;&lt;code&gt;CREATE TEMPORARY VIEW revenue&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT day, SUM&amp;#40;cash&amp;#95;movement&amp;#95;amount&amp;#41; AS amount
+  FROM &amp;#40;
+    SELECT
+      date&amp;#95;trunc&amp;#40;cash&amp;#95;movement&amp;#95;time, 'day'&amp;#41; AS day,
+      cash&amp;#95;movement&amp;#95;amount
+    FROM cash&amp;#95;movements
+    WHERE cash&amp;#95;movement&amp;#95;amount &amp;gt; 0
+  &amp;#41; AS x
+  GROUP BY day
+&amp;#41;;
+
+CREATE TEMPORARY VIEW expenses&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT day, SUM&amp;#40;cash&amp;#95;movement&amp;#95;amount&amp;#41; AS amount
+  FROM &amp;#40;
+    SELECT
+      date&amp;#95;trunc&amp;#40;cash&amp;#95;movement&amp;#95;time, 'day'&amp;#41; AS day,
+      cash&amp;#95;movement&amp;#95;amount
+    FROM cash&amp;#95;movements
+    WHERE cash&amp;#95;movement&amp;#95;amount &amp;lt; 0
+  &amp;#41; AS x
+  GROUP BY day
+&amp;#41;;
+
+CREATE TEMPORARY VIEW cash&amp;#95;flow&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT day, SUM&amp;#40;cash&amp;#95;movement&amp;#95;amount&amp;#41; AS amount
+  FROM &amp;#40;
+    SELECT
+      date&amp;#95;trunc&amp;#40;cash&amp;#95;movement&amp;#95;time, 'day'&amp;#41; AS day,
+      cash&amp;#95;movement&amp;#95;amount
+    FROM cash&amp;#95;movements
+  &amp;#41; AS x
+  GROUP BY day
+&amp;#41;;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;That's a lot of code duplication! I wish I could do something like the following instead:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;sql&quot;&gt;CREATE TEMPORARY VIEW aggregate&amp;#95;cash&amp;#95;flow&amp;#95;by&amp;#95;day &amp;#40;cash&amp;#95;movmts&amp;#41; -- mind the parameter here
+AS &amp;#40;
+  SELECT day, SUM&amp;#40;cash&amp;#95;movement&amp;#95;amount&amp;#41; AS amount
+  FROM &amp;#40;
+    SELECT
+      date&amp;#95;trunc&amp;#40;cash&amp;#95;movement&amp;#95;time, 'day'&amp;#41; AS day,
+      cash&amp;#95;movement&amp;#95;amount
+    FROM cash&amp;#95;movmts
+  &amp;#41; AS x
+  GROUP BY day
+&amp;#41;;
+
+CREATE TEMPORARY VIEW revenue&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT &amp;#42; FROM aggregate&amp;#95;cash&amp;#95;flow&amp;#95;by&amp;#95;day&amp;#40;
+    SELECT &amp;#42; FROM cash&amp;#95;movements
+    WHERE cash&amp;#95;movement&amp;#95;amount &amp;gt; 0
+  &amp;#41;
+&amp;#41;;
+
+CREATE TEMPORARY VIEW expenses&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT &amp;#42; FROM aggregate&amp;#95;cash&amp;#95;flow&amp;#95;by&amp;#95;day&amp;#40;
+    SELECT &amp;#42; FROM cash&amp;#95;movements
+    WHERE cash&amp;#95;movement&amp;#95;amount &amp;lt; 0
+  &amp;#41;
+&amp;#41;;
+
+CREATE TEMPORARY VIEW cash&amp;#95;flow&amp;#95;per&amp;#95;day AS &amp;#40;
+  SELECT &amp;#42; FROM aggregate&amp;#95;cash&amp;#95;flow&amp;#95;by&amp;#95;day&amp;#40;
+    SELECT &amp;#42; FROM cash&amp;#95;movements
+  &amp;#41;
+&amp;#41;;
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Going back to our SQL views / functions / methods analogy: in their current form, SQL views give us the equivalent of  0-arguments functions, or static methods. I wish we could have the equivalent of functions with arbitrary arity!  This would give us much more leverage for code reuse and decoupling.&lt;/p&gt;&lt;p&gt;Note that stored procedures can't really help us achieve this, as they are not temporary. The best way to emulate them currently  is probably to use a client SQL-generating library.&lt;/p&gt;&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;&lt;p&gt;I have found that:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;SQL is very powerful for expressing domain logic: consider using it for other purposes than just shipping data to/from storage!&lt;/li&gt;&lt;li&gt;SQL views are useful for code reuse and abstraction, but because they store business logic globally and durably, they create operational difficulties&lt;/li&gt;&lt;li&gt;PostgreSQL TEMPORARY views eliminate most of these operational difficulties&lt;/li&gt;&lt;li&gt;If SQL views could be parameterized, they would get insanely more powerful.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Please feel free to challenge these assertions in comments!&lt;/p&gt;
+</description>
+<pubDate>
+Sun, 05 Nov 2017 00:00:00 +0100
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/what-makes-a-good-repl.html
