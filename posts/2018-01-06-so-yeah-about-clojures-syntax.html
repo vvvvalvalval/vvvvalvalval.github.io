@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: So yeah, about Clojure&#39;s syntax...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">January 6, 2018</div>
+        
+    </div>
+    <h2>So yeah, about Clojure&#39;s syntax...</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#does_syntax_matter?">Does syntax matter?</a></li><li><a href="#the_ingredients_of_clojure&apos;s_syntax">The ingredients of Clojure's syntax</a></li><ol><li><a href="#data_literals">Data literals</a></li><li><a href="#macros">Macros</a></li></ol><li><a href="#consequences">Consequences</a></li><ol><li><a href="#verbosity_is_a_solved_problem">Verbosity is a solved problem</a></li><li><a href="#separation_of_concerns:_code_layout_⊥_program_structure">Separation of concerns: code layout ⊥ program structure</a></li><ol><li><a href="#example:_the_builder_pattern">Example: the Builder Pattern</a></li></ol><li><a href="#code_=_data_=_data_viz">Code = Data = Data Viz</a></li><li><a href="#tooling_as_libraries">Tooling as libraries</a></li><li><a href="#an_&apos;all-tracks&apos;_language:_embedding_paradigms">An 'all-tracks' language: embedding paradigms</a></li><ol><li><a href="#example:_web_uis">Example: Web UIs</a></li></ol><li><a href="#saner_language_stewardship">Saner language stewardship</a></li></ol><li><a href="#summary">Summary</a></li></ol>
+    <p>For many experienced programmers, the first encounter with Clojure's syntax ranges from slightly disturbing to downright <i>shocking.</i></p><blockquote><p> Why on Earth would you put the function <i>inside</i> the parens? That's just <i>weird!</i> </p></blockquote><p>We programmers can get very emotional about syntax. I guiltily remember my Java days, and how I enjoyed the ceremony of typing  things like <code>protected final void etc&#40;&#41;{...}</code>. But we also need to be pragmatic, and if we're able to overcome these subjective biases,  we can make more lucid technical decisions.</p><p>So the goal of this article is to help you understand <i>why</i> some of us choose to leave the familiar comfort of C-style syntax   for this strange world of brackets and parentheses - and how rewarding it can be.</p><p><strong>Disclaimer:</strong> this article does not try to <i>prove</i> the benefits of Clojure's syntax - merely to communicate my perception of them.  I believe the right tool for assessing language design is experience using it, not rethorics :)</p><h2 id="does&#95;syntax&#95;matter?">Does syntax matter?</h2><p>First, let me start by saying this: <strong>syntax is NEVER a good reason to use or dismiss a programming language.</strong>  If your approach for choosing a language is 'I (don't) like the syntax', you're doing it wrong.  The semantics of a language, its execution model, its ecosystem, its performance characteristics, etc. are much more  important factors.</p><p>Developers face many technical difficulties when building real-world systems; the most painful of these difficulties tend  to last fo years and get worse over time. So if being unfamiliar with some language syntax is your most painful problem  at work, I envy you, because you can be 100% confident that this problem will be over in a matter of days :).</p><p>Does this mean that syntax does not matter for language design? Of course it matters!  Syntax matters, because it encourages or inhibits certain  programming idioms. You <i>could</i> write Java programs in the same style as Clojure programs, but that would be extremely  unwieldy, to the point that no team would be willing to sustain such an effort (not to mention a whole ecosystem).</p><p>As we'll see, Clojure's syntax is an enabler for many desirable things.</p><h2 id="the&#95;ingredients&#95;of&#95;clojure's&#95;syntax">The ingredients of Clojure's syntax</h2><h3 id="data&#95;literals">Data literals</h3><p>The textual syntax of Clojure is actually just a notation for data structures. You can think of it as 'JSON on steroids':  less verbose (commas are optional), richer and extensible set of data types, maps can have arbitrary keys, etc.</p><p>Examples in code:</p><pre><code class="clojure">; comments are preceded by a semicolon ';'
+
+;;;; scalar types
+
+0 -1 2048 3.14 3/4 6.022e23 ;; numbers
+true false ;; booleans
+nil ;; null / nothing
+&quot;hello&quot; ;; strings
+&quot;multi
+line
+string&quot;
+;; Clojure has 2 symbolic types: keywords and symbols
+:a :hello :org.my-company/foo ;; keywords - programmatic identifiers, a bit like enums, 'represent themselves', often used as keys in maps
+a hello fn my.ns/foo-bar ArrayList + &#42; - &lt;div&gt; ;; symbols - typically used to 'name' some other value
+
+;;;; collection types
+
+;; lists: sequential collections that 'grow at the front', delimited by parentheses &#40;...&#41;
+&#40;1 -2 42&#41; ;; a list of 3 numbers
+&#40;:a :b :c&#41; ;; a list of 3 keywords
+&#40;:a b &quot;c&quot; :d 42&#41; ;; lists can be heterogeneous
+&#40;&#41; ;; the empty list
+&#40;&#40;&#41; &#40;:a b&#41;&#41; ;; a list of 2 lists
+&#40;x
+ :y
+ &quot;z&quot;&#41; ;; can span multiple lines
+
+;; vectors: also sequential collections, but 'grow at the end', and support random access &#40;like arrays&#41;, delimited by square brackets &#91;...&#93;
+&#91;1 -2 42&#93;
+&#91;:a b &quot;c&quot;&#93;
+&#91;&#93;
+&#91;&#40;&#41;&#91;&#93;&#91;&#40;&#41;&#93;&#93;
+&#91;1
+ 2
+ 3&#93;
+
+;; maps: sets of key-value pairs &#40;a.k.a 'dictionaries' or 'hashes' in other languages&#41;, delimited by brackets {...}
+{:k1 &quot;v1&quot; :k2 &quot;v2&quot; :k3 &quot;v3&quot;} ;; a map of 3 key-value pairs; in this case, the keys are keywords, and the values strings
+{:k1 &quot;v1&quot;, :k2 &quot;v2&quot;, :k3 &quot;v3&quot;} ;; you can add commas if they make you feel better; in Clojure, commas are whitespace.
+{} ;; empty map
+;; keys and values can be of any type, the only constraint is that keys must be distinct
+{:k1 :v1
+ &quot;k2&quot; v2
+ k3 &#91;:v 3&#93;
+ &#91;&#93; &#40;1 2 3&#41;
+ 12 nil
+ :a {:b :c
+     :d &#91;:e :f&#93;}
+ nil true}
+</code></pre><p>So the Clojure compiler does not really compile text: instead, it compiles data structures, each data structure being  treated as an expression. Consider for example this code:</p><pre><code class="clojure">&#40;defn square &#91;x&#93;
+  &#40;&#42; x x&#41;&#41;
+</code></pre><p>In terms of syntax, this is actually a <i>list</i> of 4 elements:</p><pre><code class="clojure">&#40;defn    ;; the symbol 'defn'
+ square  ;; the symbol 'square'
+ &#91;x&#93;     ;; a vector of 1 element, which is the symbol 'x'
+ &#40;&#42; x x&#41; ;; a list of 3 elements &#40;all symbols&#41;
+&#41;
+</code></pre><p>When these data structures are 'executed', some data types are evaluated using some special rules:</p><ul><li><strong>symbols</strong> are evaluated to the value that they 'name' (a function parameter, or a global constant, or a local variable, etc.)</li><li><strong>lists</strong> (example: <code>&#40;op x y z...&#41;</code>) represent 'invoking an operation': by default invoking a function (e.g <code>&#40;myfun x &quot;y&quot; 42&#41;</code> is equivalent to <code>myfun&#40;x, &quot;y&quot;, 42&#41;</code> in C-style syntax), but sometimes another sort of operation.</li></ul><p>For instance, <code>&#40;defn my-fun &#91;x y&#93; ...&#41;</code> is the operation: 'define a function named <code>my-fun</code>, that has 2 arguments <code>x</code> and <code>y</code>, etc.'</p><p>In particular, these special operations can be <i>macros</i>, which we'll describe in the next section.</p><h3 id="macros">Macros</h3><p>As explained above, in Clojure, some of the operations that you call with lists are evaluated specially.</p><p>A handful of these special operations are built-in to the language, and called <i>special forms:</i>,</p><pre><code class="clojure">;;;; examples of special forms
+
+;; def - creates a named global constant
+&#40;def my-constant 42&#41;
+
+;; let - names local values
+&#40;let &#91;x 3
+      y 4&#93;
+  &#40;+ x y&#41;&#41;
+
+;; if - control flow, evaluates one expression or the other depending on the first expression's value
+&#40;if &#40;even? n&#41;
+  :even
+  :odd&#41;
+
+;; fn - creates an anonymous function, or 'lambda'
+&#40;fn &#91;x&#93;
+  &#40;&#42; x x&#41;&#41;
+</code></pre><p>All the other special operations are <strong>macros</strong>.</p><p>Macros essentially <i>rewrite</i> the code that you pass to them to other code: just like a function accept values and return  a value, a macro accepts code expressions and return a new code expression.</p><p>For instance, in Clojure, the <code>or</code> operator (equivalent to <code>||</code> is C-style languages) is a macro that emits code using  the lower-level <code>if</code>:</p><pre><code class="clojure">;; the following expression, which uses the 'or' macro:
+
+&#40;or x y z&#41;
+
+;; ...expands to something like:
+
+&#40;if x
+  x
+  &#40;if y
+    y
+    &#40;if z
+      z
+      nil&#41;&#41;&#41;
+</code></pre><p>Importantly, in Clojure, <strong>the programmer can define her own macros</strong>  (using <a href='https://clojuredocs.org/clojure.core/defmacro'><code>defmacro</code></a>; we won't delve into how to use it,  as that would require a proper Clojure tutorial, but it's basically just like defining a function).</p><p><strong>Some observations about macros:</strong></p><ol><li>Macros accept code expressions <i>as data structures</i>, and return a code expression <i>as a data structure</i>. So defining a macro consists simply of defining a function that manipulates data structures (which is what programmers do every day).</li><li>This 'syntax as a data notation' aspect exists precisely to make macros easy to write</li><li>Macros essentially let you attach 'nex meanings' to syntax.</li><li>You can think of macros as giving you the opportunity to transform the <a href='https://en.wikipedia.org/wiki/Abstract_syntax_tree'>AST</a> of the program during compilation (more accurately, its Concrete Syntax Tree).</li><li>Macros enable 'zero-cost abstractions', i.e abstractions that have no runtime performance cost (since they operate at compile-time).</li><li>Macros can do anything to compute the returned expression: use previously-defined functions, make network calls, call a database, etc.</li><li>LISP-style macros aren't the same thing <i>at all</i> than C/C++-style macros: don't judge the former because you've been bitten by the latter :)</li></ol><p>If you want to know more precisely how this all works, I recommend reading <a href='https://clojure.org/reference/evaluation'>the reference on clojure.org</a>.</p><h2 id="consequences">Consequences</h2><h3 id="verbosity&#95;is&#95;a&#95;solved&#95;problem">Verbosity is a solved problem</h3><p>The first consequence of having concise data literals and macros is that verbosity never gets in your way when programming:  whatever the program design you're considering, you know the code will never 'get too tedious', because you will be able  to factor out the repetition and noise from the code (more often by using existing macros than by using new ones).</p><p>A famous example is GUI programming in Java using the Swing toolkit, which is knowingly tedious, especially when nesting components.  The following code uses the <code>doto</code> macro to achieve more concision and clarity than the Java equivalent, while still embracing  the original Swing API:</p><pre><code class="clojure">&#40;doto &#40;JFrame.&#41;
+  &#40;add &#40;doto &#40;JLabel. &quot;Hello World&quot;&#41;
+         &#40;setHorizontalAlignment SwingConstants/CENTER&#41;&#41;&#41;
+  pack show&#41;
+</code></pre><p>The Java equivalent would be:</p><pre><code class="java">JFrame f = new JFrame&#40;&#41;;
+JLabel l = new JLabel&#40;&quot;Hello World&quot;&#41;;
+l.setHorizontalAlignment&#40;SwingConstants.CENTER&#41;;
+f.add&#40;l&#41;;
+l.pack&#40;&#41;;
+l.show&#40;&#41;;
+</code></pre><p>Data literals also work towards this goal at a higher level: by encouraging you to write programs mostly as data instead of code,  which makes them fundamentally more flexible, regular, and easier to operate and instrument. Data literals, by helping you  embed data in code, make for a smooth transition from code to data.</p><p>A nice example of this is Datomic's <a href='http://docs.datomic.com/query.html'>Datalog</a>, the main query language for the Datomic database.  Writing Datalog using Clojure data literals is no less concise than SQL, but it's much more <i>programmable</i>: for instance,  generating advanced Datalog queries is much easier and more fool-proof than generating SQL queries. Example:</p><pre><code class="clojure">&#40;ns movies-example
+  &#40;:require &#91;datomic.api :as d&#93;&#41;&#41;
+
+;; example 1: a simple ordinary query
+&#40;defn actors-of-movie
+  &quot;find all actors who played in the given movie&quot;
+  &#91;db movie-id&#93;
+  &#40;d/query
+    ;; this is Datolog, embedded in Clojure code using data literals
+    '{:find &#91;&#91;?actor ...&#93;&#93;
+      :in &#91;$ ?movie-id&#93;
+      :where
+      &#91;&#91;?movie :movie/id ?movie-id&#93;
+       &#91;?actor :person/acted-in ?movie&#93;&#93;}
+    db movie-id&#41;&#41;
+
+;; example 2: generating a Datalog query
+&#40;defn movies-with-all-actors
+  &quot;Finds the movies starring all the given actors&quot;
+  &#91;db actors-ids&#93;
+  &#40;let &#91;inputs &#40;-&gt;&gt; actors-ids
+                 &#40;map-indexed &#40;fn &#91;i actor-id&#93;
+                                &#91;&#40;symbol &#40;str &quot;?actor-&quot; i&#41;&#41;
+                                 actor-id&#93;&#41;&#41;&#41;
+        q {:find '&#91;&#91;?movie ...&#93;&#93;
+           :in &#40;concat '&#91;$&#93; &#40;map first inputs&#41;&#41;
+           :where
+           &#40;for &#91;?actor-i &#40;map first inputs&#41;&#93;
+             &#91;?actor-i :person/acted-in '?movie&#93;&#41;}&#93;
+    &#40;apply d/query q
+      db &#40;map second inputs&#41;&#41;&#41;&#41;
+</code></pre><p>A more extreme example of this philosophy is the <a href='http://www.onyxplatform.org/'>Onyx</a> data processing platform,  which lets you express entire workflows using just data.</p><h3 id="separation&#95;of&#95;concerns:&#95;code&#95;layout&#95;⊥&#95;program&#95;structure">Separation of concerns: code layout ⊥ program structure</h3><p>There is more to macros than just eliminating boilerplate: macros enable you to design your programs without having to  anticipate how the calling code is going to look, making these independent choices.</p><p>So you could say <strong>macros separate 2 concerns:</strong></p><ul><li><strong>program structure</strong> (writing programs which are reusable, flexible, composable, decoupled etc.)</li><li><strong>code look and feel</strong> (clarity, concision, organization, visual layout etc.)</li></ul><h4 id="example:&#95;the&#95;builder&#95;pattern">Example: the Builder Pattern</h4><p>What happens when these concerns are not separated? Then programmers face dilemmas, which drag away their focus from  essential problems. One of these dilemmas is whether or not to use the <a href='https://en.wikipedia.org/wiki/Builder_pattern'>Builder Pattern</a>.  Let's see an example of that</p><p><a href='http://underscorejs.org/'>UnderscoreJs</a> is a popular JavaScript library providing utilities for manipulating collections.  Examples:</p><pre><code class="javascript">var &#95; = require&#40;'underscore'&#41;;
+
+var numbers = &#95;.range&#40;100&#41;;
+
+// keep only the even numbers
+&#95;.filter&#40;numbers, function&#40;n&#41;{return n % 2 === 0;}&#41;;
+
+// squaring the numbers
+&#95;.map&#40;numbers, function&#40;n&#41;{return n &#42; n;}&#41;;
+
+// summing the numbers
+&#95;.reduce&#40;numbers, function&#40;sum, n&#41;{return sum + n;}, 0&#41;;
+</code></pre><p>These functions are powerful, but chaining them can be impractical. Continuing with our example, imagine you want to sum  the squares of even numbers smaller than 100:</p><pre><code class="javascript">&#95;.reduce&#40;
+  &#95;.map&#40;
+    &#95;.filter&#40;
+      &#95;.range&#40;100&#41;,
+      function&#40;n&#41;{return n % 2 === 0;}&#41;,
+    function&#40;n&#41;{return n &#42; n;}&#41;,
+  function&#40;sum, n&#41;{return sum + n;},
+  0&#41;;
+</code></pre><p>You see the readability problem with this code: it displays the operations as nested from the inside out, when we think  of them as successive.</p><p>UnderscoreJs addresses this problem by providing a <code>chain</code> operation, which uses the Builder Pattern to make the code  'look' chained:</p><pre><code class="javascript">&#95;.chain&#40;&#95;.range&#40;100&#41;&#41;
+ .filter&#40;function&#40;n&#41;{return n % 2 === 0;}&#41;
+ .map&#40;function&#40;n&#41;{return n &#42; n;}&#41;
+ .reduce&#40;function&#40;sum, n&#41;{return sum + n;}, 0&#41;
+ .value&#40;&#41;;
+</code></pre><p>This approach solves the surface readability problem, but brings new, deeper problems:</p><ul><li>The set of operations available in a <code>&#95;.chain&#40;&#41; &#40;...&#41; .value&#40;&#41;</code> context is not extensible, making it hostile to abstraction. For instance, you can no longer contract the 'square' and 'sum' steps into a single 'sumSquares' step - which you could easily do when using plain old functions.</li><li>The source code of the underlying operation is much harder to write and reason about. How long would it take you to re-implement a robust version of <code>&#95;.chain</code>?</li></ul><p>Now let's see how Clojure does when applied to the same problem. Clojure's standard library provides similar functions  to UnderscoreJs:</p><pre><code class="clojure">&#40;def numbers &#40;range 100&#41;&#41;
+
+&#40;filter &#40;fn &#91;n&#93; &#40;= &#40;mod n 2&#41; 0&#41;&#41; numbers&#41;
+
+&#40;map &#40;fn &#91;n&#93; &#40;&#42; n n&#41;&#41; numbers&#41;
+
+&#40;reduce + 0 numbers&#41;
+</code></pre><p>Chaining these functions calls directly by nesting them looks just as messy as it did in JS:</p><pre><code class="clojure">&#40;reduce + 0
+  &#40;map &#40;fn &#91;n&#93; &#40;&#42; n n&#41;&#41;
+    &#40;filter &#40;fn &#91;n&#93; &#40;= &#40;mod n 2&#41; 0&#41;&#41;
+      &#40;range 100&#41;&#41;&#41;&#41;
+</code></pre><p>However, Clojure gives us a very nice tool for solving the readability problem: the <a href='http://clojuredocs.org/clojure.core/-%3E%3E'><code>-&gt;&gt;</code></a> (pronounce: 'thread last') macro:</p><pre><code class="clojure">&#40;-&gt;&gt; &#40;range 100&#41;
+  &#40;filter &#40;fn &#91;n&#93; &#40;= &#40;mod n 2&#41; 0&#41;&#41;&#41;
+  &#40;map &#40;fn &#91;n&#93; &#40;&#42; n n&#41;&#41;&#41;
+  &#40;reduce + 0&#41;&#41;
+</code></pre><p>This code is much clearer, and I want to emphasize that <code>map</code>, <code>filter</code> and <code>reduce</code> are exactly the same functions here as  we used above. Actually, all <code>-&gt;&gt;</code> does is 're-write' the code in the previous, messy form, as we can verify using <code>macroexpand</code>:</p><pre><code class="clojure">&#40;macroexpand
+  '&#40;-&gt;&gt; &#40;range 100&#41;
+     &#40;filter &#40;fn &#91;n&#93; &#40;= &#40;mod n 2&#41; 0&#41;&#41;&#41;
+     &#40;map &#40;fn &#91;n&#93; &#40;&#42; n n&#41;&#41;&#41;
+     &#40;reduce + 0&#41;&#41;&#41;
+=&gt; &#40;reduce + 0 &#40;map &#40;fn &#91;n&#93; &#40;&#42; n n&#41;&#41; &#40;filter &#40;fn &#91;n&#93; &#40;= &#40;mod n 2&#41; 0&#41;&#41; &#40;range 100&#41;&#41;&#41;&#41;
+</code></pre><p><code>-&gt;&gt;</code> is also fairly easy to implement: all you have to do is think of the expressions as data structure, and  re-arrange them to the desired form. Here's an implementation off the top of my head:</p><pre><code class="clojure">&#40;defmacro -&gt;&gt;
+  &#91;start &amp; more&#93;
+  &#40;reduce
+    &#40;fn &#91;inner outer&#93;
+      &#40;let &#91;outer &#40;if &#40;list? outer&#41; outer &#40;list outer&#41;&#41;&#93;
+        &#40;into &#40;list inner&#41; &#40;reverse outer&#41;&#41;&#41;&#41;
+    start more&#41;&#41;
+</code></pre><p>What's neat about the above solution is that <strong>we haven't compromised at all on program structure in order to make the code pretty.</strong>  We just composed 2 orthogonal tools, each solving a separate concern:</p><ul><li>a <strong>syntactic tool</strong> (the <code>-&gt;&gt;</code> macro) to solve a syntactic problem (organizing the code visually)</li><li>a <strong>semantic tool</strong> (the <code>map</code> / <code>filter</code> / <code>reduce</code> functions) to make a correct, well-structured program.</li></ul><h3 id="code&#95;=&#95;data&#95;=&#95;data&#95;viz">Code = Data = Data Viz</h3><p>There's a famous Lisp aphorism that <i>'code is data'</i>, meaning that the syntax for Lisp is a <i>notation</i> for data structures  that can easily be manipulated by the language (after all, LISP stands for LISt Processing). In the case of Clojure, these  data structures are lists, vectors and maps. This is what makes macros so easy to write in Clojure.</p><p>Another aspect of Clojure's syntax, as we saw above, is that it's a very human-friendly notation for structured data.  As such, Clojure's syntax is a good tool for doing <strong>both data reprensentation and data visualization.</strong></p><p>This last aspect is critical to Clojure's interactive development story. When you evaluate an expression at the Clojure  REPL, the result is presented to you in Clojure's syntax: this makes it easy to analyze (especially when pretty-printed  and syntax-highlighted), but it also makes it immediately available as a code expression, to be reused for further exploration  or persisted in source files.</p><p><a href='https://vimeo.com/230220635'><img src="/img/repl.gif" width="100%"></img></a></p><h3 id="tooling&#95;as&#95;libraries">Tooling as libraries</h3><p>When you have macros, a huge part of the external tools that are commonplace in other languages become obsolete.  Macros are typically used as a replacement for:</p><ul><li>source code generation / transformation</li><li>debugging tools</li><li>syntax entensions / 'transpilers'</li><li>bytecode manipulation</li><li>annotations</li><li>documentation generation</li></ul><p>Macros have several advantages in this area:</p><ul><li>they're easy to install, since they're available as libraries</li><li>they're portable (a macro is not limited to Build Tool X or Editor Y or Framework Z)</li><li>they require little effort to create (it typically takes a few week-ends to a lone developer to make such a library, not a few months to an engineering department at a big company)</li></ul><p><div class="my-tweet-wrapper">  <blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">  “I don’t need macros, they’re too complicated and not useful,” says the programmer as they use Flow with JSX with Babel with two dozen plugins and maintain two hundred line webpack configs for code with machine-checked comments that parses CSS in template strings at runtime and—</p>&mdash; Alexis King (@lexi_lambda)  <a href='https://twitter.com/lexi_lambda/status/948435311058599936?ref_src=twsrc%5Etfw'>January 3, 2018</a>  </blockquote> </div></p><h3 id="an&#95;'all-tracks'&#95;language:&#95;embedding&#95;paradigms">An 'all-tracks' language: embedding paradigms</h3><p>Every non-trivial applications sooner or later reaches a point where it cannot be served well  with just one programming paradigm. Some part of your program may need a declarative way of  building UI trees (HTML templating / PHP / JSP / ERB / etc.), whereas another just needs some  procedural glue. Some parts of your business logic may be well expressed in a functional style,  when some other would benefit more from using logic programming (Prolog, MiniKanren) or  a production rules system. Some computation may need an imperative algorithm (e.g in C), when others  are best expressed as graphs of computational steps.</p><p>Because Clojure's syntax is not opinionated about semantics (remember, it's just data structures),  it welcomes any programming paradigm; and because it's so programmable (again, it's just data structures),  it lets users provide implementations of those paradigms as libraries (either by building interpreters for structures,  or via macros).</p><p>The 'default' paradigm of Clojure is dynamically-typed, functional programming, i.e lambda-expressions  evaluating to generic, immutable data structures, or functions of those. However, many other paradigms  are available as libraries, for example:</p><ul><li>Logic programming (<a href='https://github.com/clojure/core.logic'>core.logic</a>)</li><li>Production rules (<a href='http://www.clara-rules.org/'>Clara Rules</a>)</li><li>ML-style Pattern Matching (<a href='https://github.com/clojure/core.match/wiki/Overview'>core.match</a>)</li><li>'DAG computing' (<a href='https://github.com/plumatic/plumbing#graph-the-functional-swiss-army-knife'>Plumatic/Graph</a>)</li><li>SQL querying (<a href='https://github.com/jkk/honeysql'>HoneySQL</a>)</li><li>Golang-style CSPs (<a href='https://github.com/clojure/core.async'>core.async</a>)</li><li>Static type checking (<a href='https://github.com/clojure/core.typed'>core.typed</a>)</li><li>HTML templating (<a href='https://github.com/weavejester/hiccup'>Hiccup</a>), CSS (<a href='https://github.com/noprompt/garden'>Garden</a>)</li></ul><p>Having one syntax to host all these paradigms makes it much more practical to compose them together,  because their implementations can <strong>share a lot of the language's infrastructure</strong> (runtime, editors, tooling,  dependency management, code modularization, etc.)</p><p>You could however argue that having different syntaxes for different paradigms is beneficial,  because using them in separate source files forces programmers to separate concerns.  That's not the case in my experience, because <strong>in a typical program, different paradigms don't address different concerns, rather different aspects of the same concern.</strong></p><h4 id="example:&#95;web&#95;uis">Example: Web UIs</h4><p>For example, one of the biggest lies that are told to novice Web programmers is that  HTML, CSS and JavaScript are respectively for content, style and logic. For today's web  applications, this is not true at all, and trying to enforce this separation actually creates  much more complexity than it eliminates. The reasons for this separation are actually historical;  the modern best practice is to separate UI into <i>components</i>, each component having its own  DOM templating, styles and logic. In the JavaScript world, inline styles and JSX are approaches  for co-locating them in code.</p><p>Here's an example of such a component in ClojureScript, from one of my personal projects.  Note that this is just plain old Clojure: no build tooling is involved in making this work.</p><pre><code class="clojure">&#40;ns m12.widgets.gtab
+  &#40;:require &#91;rum.core :as rum&#93;
+            &#91;m12.widgets.ui-toolkit :as utk&#93;&#41;
+  &#40;:require-macros
+    &#91;rum.core :as rum :refer &#91;defc defcs&#93;&#93;&#93;&#41;&#41;
+
+;; a 'guitar tablature' component
+&#40;defc &lt;guitar-tab&gt; &lt; rum/static rum/reactive
+  &#91;props
+   {:as opts, :keys &#91;n-strings length string-heights&#93;
+    :or {n-strings 6}}
+   items content&#93;
+  &#40;let &#91;strings-items &#40;group-by ::string items&#41;&#93;
+    &#91;:div.gtab props
+     &#40;for &#91;i &#40;range n-strings&#41;&#93;
+       &#91;:div.gtab-string {:key &#40;str &quot;gtr-string-&quot; i&#41;}
+        &#91;:div.gtab-string-inner
+         &#40;-&gt;&gt; &#40;strings-items i&#41;
+           &#40;map-indexed
+             &#40;fn &#91;k {:as item, x ::x}&#93;
+               &#91;:div.gtab-item
+                {:style {:left &#40;str &#40;&#42; 100 &#40;/ x length&#41;&#41; &quot;%&quot;&#41;}
+                 :key &#40;str &quot;gtab-item-&quot; k&#41;}
+                &#40;content item i&#41;&#93;
+               &#41;&#41;&#41;&#93;
+        &#40;when-let &#91;h &#40;get string-heights i&#41;&#93;
+          &#91;:div.gtab-item.gtab-string-height
+           &#91;:div.gtab-note &#40;utk/&lt;height&gt; h&#41;&#93;&#93;&#41;&#93;&#41;&#93;&#41;&#41;
+
+;; ...
+</code></pre><h3 id="saner&#95;language&#95;stewardship">Saner language stewardship</h3><p>History has shown than one of the most important guidelines in developing a programming language  is preserving its ability to evolve, because language developers cannot anticipate all the future  needs of their users. Guy Steele articulated this very well in his talk  <a href='https://www.youtube.com/watch?v=_ahvzDzKdB0'>Growing a Language</a>.</p><p><iframe width="560" height="315" src="https://www.youtube.com/embed/_ahvzDzKdB0" frameborder="0" gesture="media" allow="encrypted-media" allowfullscreen></iframe></p><p>Macros play an interesting role in this regard, because they essentially enable users to 'add features'  to the language. For instance, Clojure does not natively ship with ML-style pattern matching, encouraging  instead a combination of destructuring and polymorphism (via <a href='https://clojure.org/reference/multimethods'>multimethods</a>).  However, the <a href='https://github.com/clojure/core.match/wiki/Overview'>core.match</a>  library provides a macro for pattern-matching when that's really a better fit.</p><p>Macros have the implication that, if some Clojure users are missing some language features for a particular project,  they can write it themselves right away, instead of having to lobby the core developers of the language.  They can make this new feature available as a library, and if not everyone agrees that this feature is beneficial, well,  not everyone has to use the library. Eventually, there may be a consensus that this feature should be added  to the core of the language, and by that time there will be empirical evidence that it's really useful. It also  means that the language developers can focus on the long-term, strategic evolutions of the language, instead  of solving the specific, short-term needs of their users.</p><p>What happens when users can't extend the language? Then language developers take various approaches  to handle requests from the users. Some languages are very conservative and just leave their users wanting,  which is bad enough, especially when it leads the users to hack around this limitation by adding 'language features'  via tooling (see for example the proliferation of 'transpiler' plugins in the JS ecosystem).</p><p>Some languages take the opposite approach and will add new language features as quickly as possible,  which is even worse. <strong>Adding features too readily to the core of a language will please some users on the short term, but can have very bad consequences to its ecosystem on the long term:</strong></p><ul><li>It adds complexity to the language, which makes it harder to learn for beginners and harder to maintain for language developers</li><li>It creates a 'combinatorial explosion' of programming styles, which paralyzes programmers when writing code ("Should I use a lambda for this? Or maybe a block? Or maybe a subclass? ...") and puzzles them when reading code written by others</li><li>Some language features seem like elegant ideas, then experience proves they're just harmful</li><li>As more and more features get added, the 'idiomatic way' to code evolves significantly, encouraging major (often breaking) changes in the ecosystem (PHP would be a good example of that)</li><li>When a new feature is added to the core of a language, it encourages all users to use it, even if only an influent minority actually needs it.</li></ul><p>In contrast, growing the language via libraries mitigates these issues, because you have more nuanced options than 'add feature X or leave it out'.</p><p><div class="my-tweet-wrapper"> <blockquote class="twitter-tweet" data-lang="en" data-cards="show"><p lang="en" dir="ltr">stable core with additive innovation in libraries <a href="https://twitter.com/hashtag/clojure?src=hash&amp;ref<i>src=twsrc%5Etfw">#clojure</a> <a href="https://t.co/dhBYdEWSRB">https://t.co/dhBYdEWSRB</a></p>&mdash; stuarthalloway (@stuarthalloway) <a href="https://twitter.com/stuarthalloway/status/949343240435720198?ref</i>src=twsrc%5Etfw">January 5, 2018</a></blockquote> </div></p><p>Having said that, you could reasonably argue that giving <i>every</i> user the ability to extend the language gives them  more power to shoot themselves in the foot. From what I've seen, this hasn't really be the case with Clojure so far:  only a minority of Clojure programmers write macros, and the 'leadership' of the language has done a good job  educating the community to the perils of macros.</p><p>Finally, this 'growing via libraries' aspect has led Clojure to be a very stable language: its users aren't really  asking for new features. In this sense, Clojure is more mature than older, mainstream languages like JavaScript and Java,  which keep undergoing major evolutions (most of which are welcomed, but with unforeseen consequences).</p><h2 id="summary">Summary</h2><p>Because Clojure's syntax is just an effective notation for data structures, it serves as a generic representation  for structured thought. Macros can then be used to attach new <i>meanings</i> to syntax, which relieves programmers of  many incidental concerns, and has been an 'unfair advantage' to Clojure's ecosystem, allowing it with relatively little effort  to achieve very good stability and tooling, while providing access to a rich set of programming paradigms.</p><p>Again, I realize these are bold claims. If you're skeptical, I would encourage you to give Clojure a try and make your own mind.</p><p>Finally, it should be noted that a lot of what was said above applies to other languages of the LISP family, not just Clojure.</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/Clojure.html">Clojure</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Using PostgreSQL temporary views for expressing business logic &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2018-01-06-so-yeah-about-clojures-syntax.html">So yeah, about Clojure&#39;s syntax...</a></li>
+                        
+                        <li><a href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Using PostgreSQL temporary views for expressing business logic</a></li>
+                        
+                        <li><a href="/posts/what-makes-a-good-repl.html">What makes a good REPL?</a></li>
+                        
+                        <li><a href="/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html">Datomic: this is not the history you&#39;re looking for</a></li>
+                        
+                        <li><a href="/posts/2016-07-24-datomic-web-app-a-practical-guide.html">Using Datomic in your app: a practical guide</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>
