@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: DataScript as a lingua franca for domain modeling</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">July 23, 2018</div>
+        
+    </div>
+    <h2>DataScript as a lingua franca for domain modeling</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#the_approach">The approach</a></li><ol><li><a href="#the_domain_model">The Domain Model</a></li><li><a href="#the_&apos;machine_aspects&apos;">The 'Machine Aspects'</a></li><li><a href="#the_problem">The problem</a></li><li><a href="#from_domain_representation_to_machine_execution">From domain representation to machine execution</a></li><li><a href="#enter_datascript">Enter DataScript</a></li></ol><li><a href="#tradeoffs_and_limitations">Tradeoffs and limitations</a></li><ol><li><a href="#prior_art">Prior art</a></li><li><a href="#plumbing-first_vs_domain-first">Plumbing-first vs Domain-first</a></li><li><a href="#adaptable_vs_principled">Adaptable vs Principled</a></li><li><a href="#you&apos;re_in_the_business_of_framework-authoring">You're in the business of framework-authoring</a></li></ol><li><a href="#experience_report:_bandsquare">Experience report: BandSquare</a></li><li><a href="#annex:_a_datascript_refresher">Annex: a DataScript refresher</a></li></ol>
+     <p>  <img src="/img/domain-representation-to-machine-execution-with-refinement.png" width="100%"></img>  </p><p>This post discusses an approach to application architecture using <a href='https://github.com/tonsky/datascript'>DataScript</a>  (an in-memory graph database, cf <a href='#annex:_a_datascript_refresher'>the annex</a>).  The idea is simply to store metadata representing the <i>Domain Model</i> of the application  in a DataScript database, and automatically derive the 'machine' aspects of the system   from that metadata.  </p><p>If this is enough to give you inspiration for solving your own problems, my main goal for this article is already achieved.  Read on for a more detailed discussion of how, why and when to apply this approach.</p><h2 id="the&#95;approach">The approach</h2><h3 id="the&#95;domain&#95;model">The Domain Model</h3><p>Every application has some notion of a <i><a href='https://en.wikipedia.org/wiki/Domain_model'>Domain Model</a></i>,  a system of abstractions and rules describing the reality that the system is meant to address.  Domain Models can take many forms, but in this article what I'm calling the <i>Domain Model</i> is essentially  what we put in a UML diagram representing a data schema. </p><p>As an example, imagine we're developing a tiny Twitter clone named <i>Twitteur</i>;  we may represent our Domain Model for Twitteur like so:</p><p>  <img src="/img/twitteur-domain-model.png" width="100%"></img></p><p>Very typical stuff: we've defined a couple of Entity types (<code>User</code> and <code>Tweet</code>),   each containing a few attributes, each attribute being annotated with a datatypes  and various modifier, for instance:  </p><ul><li><code>user/email</code> is marked as <i>private</i>, which is in this case a security concern: it should not be publicly visible to users of the application.</li><li><code>user/n&#95;followers</code> is in a light color to signify that it's <i>derived</i>, i.e computed from other attributes.</li></ul><p>There is not enough information here to extract the nifty-gritty details of how the system  should work; but it gives us an important overview of the domain concepts and rules   underlying the system. </p><p>This Domain Model is quite small to keep the article readable, but you have to imagine   the approach we're discussing here applied to dozens of Entity types and hundreds of attributes.  </p><h3 id="the&#95;'machine&#95;aspects'">The 'Machine Aspects'</h3><p>In application code, this Domain Model will typically be apparent in many different 'mechanical' aspects of  our application, for instance:</p><ul><li>Database schema (SQL tables, <a href='https://www.datomic.com/'>Datomic</a> attributes, <a href='https://www.elastic.co/guide/en/elasticsearch/reference/current/mapping.html'>ElasticSearch</a> Mapping Types, etc.)</li><li>Database queries</li><li>API contracts (<a href='https://graphql.org/'>GraphQL</a> schema, <a href='https://www.openapis.org/about'>OpenAPI</a> specification for REST APIs, etc.)</li><li>Data validation / representation / packaging / transformation</li><li>Enforcement of security rules</li><li>Test data generation</li></ul><p>That's what we call the 'machine aspects' of the system.   In most systems, the code for these machine aspects has an (often implicit) dependency in the Domain Model:  bits of the Domain Model are hardcoded in the middle of the 'Machine Aspects' code.  Today, we're talking about doing something different: making the 'Machine-Aspects' code domain-agnostic,  and <i>parameterizing</i> it with a representation of the Domain Model.   </p><h3 id="the&#95;problem">The problem</h3><p>As I was growing a relatively large Clojure application over the course of several years,  I noticed that adding any features resulted in a lot of redundancy, which required discipline  to do right. For instance, adding a single Attribute required changes to Datomic schema installation  transactions <i>and</i> to a GraphQL Field <i>and</i> to data validation schemas <i>and</i> to security rules etc.  Forgetting to make any one of these changes would result in bugs, and was an easy error to make   as these various aspects were neither colocated nor explicitly related in code. <br /></p><p>This redundancy created more important problems than just increased volume of code:</p><ul><li><strong>over-specificity:</strong> the same mechanical patterns got repeated again and again, resulting in a large surface area for bugs to appear (and therefore a large surface area to write tests for).</li><li><strong>implicit, scattered domain logic:</strong> when reading code, the core domain logic had essentially to be reverse-engineered from bits of mechanical code spread in several places in the codebase.</li></ul><h3 id="from&#95;domain&#95;representation&#95;to&#95;machine&#95;execution">From domain representation to machine execution</h3><p>So the idea I'm presenting here is simple:</p><ol><li>represent our Domain Model declaratively, as an in-program data structure (a <i>'meta-database'</i>).</li><li>derive the 'machine' behaviour <i>generically</i> from this representation.</li></ol><p>This means that your code will tend to be split in 2 parts - a declarative part specific to your domain,   and a generic part implementing your system's machinery. </p><p>Your first instinct to implement step 1 may be to represent the Domain Model with common associative data structures: maps, lists, sets, etc.   The problem with these is that you may have a hard time implementing step 2: you will need to query and navigate the   Domain Model representation in non-trivial ways, to which the tree structure resulting from using maps and lists is not well suited.  As we've seen in the UML diagram above, our Domain Model is more graph-like than tree-like.</p><p>Which brings me to the second point of this article:  <strong>if you're going to have an in-program representation of the Domain Model, you might as well use DataScript as the supporting data structure (and API).</strong></p><h3 id="enter&#95;datascript">Enter DataScript</h3>  <br /><p><a href='https://github.com/tonsky/datascript'>DataScript</a> is an in-memory database / data-structure, available as a library   on the JVM or JavaScript, which takes inspiration from the <a href='https://www.datomic.com/'>Datomic</a> database.  DataScript has many interesting characteristics, but here are the one that are relevant for this discussion:  </p><ul><li>A <strong>flexible, graph-structured data model:</strong> the databased is logically made of a set of facts about entities (Entity-Attribute-Value triples), which naturally form a graph. Very little about the structure of that graph needs to be declared upfront; it doesn't have the rigid,  statically-defined characteristics of tables in relational databases.</li><li><strong>Powerful read APIs:</strong> you can query a DataScript database using either <i><a href='http://www.learndatalogtoday.org/'>Datalog</a></i> (a declarative, logic-based query language, which expresses query clauses as pattern matching, as expressive as SQL), the <i><a href='https://docs.datomic.com/on-prem/entities.html'>Entity API</a></i> (navigation through the database graph via a map-like interface) or the <i><a href='https://docs.datomic.com/on-prem/pull.html'>Pull API</a></i>  (pulling trees of data out of the database graph, similarly to <a href='https://graphql.org/'>GraphQL</a>) - or any composition of those!</li><li><strong>Composable writes,</strong> expressed <strong>as ordinary data structures:</strong> write requests are expressed with lists and maps (not text like SQL), and it's very easy to make sophisticated writes out of simple ones specified independently, thanks to features like temporary ids and upserts which automatically bring together the pieces of the puzzle.</li></ul><p>See <a href='#annex:_a_datascript_refresher'>the annex</a> to get a quick tour of DataScript.</p><p>DataScript is commonly used to hold data in client-side applications, typically as part of a data-synchronization mechanism.  What we're doing here is very different: we using it to hold <i>meta</i>-data about our Domain Model. Here's how it goes:  </p><ol><li>We declare assertions about our Domain Model as DataScript writes (so, just data structures).</li><li>We merge these Domain Model assertions into a DataScript database.</li><li>We query this DataScript database to generate various system components (the 'machine aspects' mentioned above) - and also to inspect our Domain Model representation for day-to-day development.  </li></ol><p>  <img src="/img/domain-representation-to-machine-execution.png" width="100%"></img></p><p>Our <i>Domain Model Assertions</i> may look like this:</p><pre><code class="clojure">;;;; Model meta-data
+;; These 2 values are DataScript Transaction Requests, i.e data structures defining writes to a DataScript database
+;; NOTE in a real-world codebase, these 2 would typically live in different files.
+
+&#40;def user-model
+  &#91;{:twitteur.entity-type/name :twitteur/User
+    :twitteur.schema/doc &quot;a User is a person who has signed up to Twitteur.&quot;
+    :twitteur.entity-type/attributes
+    &#91;{:twitteur.attribute/name :user/id
+      :twitteur.schema/doc &quot;The unique ID of this user.&quot;
+      :twitteur.attribute/ref-typed? false
+      :twitteur.attribute.scalar/type :uuid
+      :twitteur.attribute/unique-identity true}
+     {:twitteur.attribute/name :user/email
+      :twitteur.schema/doc &quot;The email address of this user &#40;not visible to other users&#41;.&quot;
+      :twitteur.attribute/ref-typed? false
+      :twitteur.attribute.scalar/type :string
+      :twitteur.attribute.security/private? true}                    ;; here's a domain-specific security rule
+     {:twitteur.attribute/name :user/name
+      :twitteur.schema/doc &quot;The public name of this user on Twitteur.&quot;
+      :twitteur.attribute/ref-typed? false
+      :twitteur.attribute.scalar/type :string}
+     {:twitteur.attribute/name :user/follows
+      :twitteur.schema/doc &quot;The Twitteur users whom this user follows.&quot;
+      :twitteur.attribute/ref-typed? true                            ;; this attribute is a reference-typed
+      :twitteur.attribute.ref-typed/many? true
+      :twitteur.attribute.ref-typed/type {:twitteur.entity-type/name :twitteur/User}}
+     {:twitteur.attribute/name :user/n&#95;followers
+      :twitteur.schema/doc &quot;How many users follow this user.&quot;
+      :twitteur.attribute/ref-typed? false
+      :twitteur.attribute.ref-typed/many? true
+      :twitteur.attribute.scalar/type :long
+      :twitteur.attribute/derived? true}                             ;; this attribute is not stored in DB
+     {:twitteur.attribute/name :user/tweets
+      :twitteur.schema/doc &quot;The tweets posted by this user.&quot;
+      :twitteur.attribute/ref-typed? true
+      :twitteur.attribute.ref-typed/many? true
+      :twitteur.attribute.ref-typed/type {:twitteur.entity-type/name :twitteur/Tweet}
+      :twitteur.attribute/derived? true}
+     &#93;}&#93;&#41;
+
+&#40;def tweet-model
+  ;; NOTE: to demonstrate the flexibility of DataScript, we choose a different but equivalent data layout
+  ;; in this one, we define the Entity Type and the Attributes separately
+  &#91;;; Entity Type
+   {:twitteur.entity-type/name :twitteur/Tweet
+    :twitteur.schema/doc &quot;a Tweet is a short message posted by a User on Twitteur, published to all her Followers.&quot;
+    :twitteur.entity-type/attributes
+    &#91;{:twitteur.attribute/name :tweet/id}
+     {:twitteur.attribute/name :tweet/content}
+     {:twitteur.attribute/name :tweet/author}
+     {:twitteur.attribute/name :tweet/time}&#93;}
+   ;; Attributes
+   {:twitteur.attribute/name :tweet/id
+    :twitteur.schema/doc &quot;The unique ID of this Tweet&quot;
+    :twitteur.attribute/ref-typed? false
+    :twitteur.attribute.scalar/type :uuid
+    :twitteur.attribute/unique-identity true}
+   {:twitteur.attribute/name :tweet/content
+    :twitteur.schema/doc &quot;The textual message of this Tweet&quot;
+    :twitteur.attribute/ref-typed? false
+    :twitteur.attribute.scalar/type :string}
+   {:twitteur.attribute/name :tweet/author
+    :twitteur.schema/doc &quot;The Twitteur user who wrote this Tweet.&quot;
+    :twitteur.attribute/ref-typed? true
+    :twitteur.attribute.ref-typed/many? false
+    :twitteur.attribute.ref-typed/type {:twitteur.entity-type/name :twitteur/User}}
+   {:twitteur.attribute/name :tweet/time
+    :twitteur.schema/doc &quot;The time at which this Tweet was published, as a timestamp.&quot;
+    :twitteur.attribute/ref-typed? false
+    :twitteur.attribute.scalar/type :long}&#93;&#41;
+</code></pre><p>As you see, these are just data structures, and you have a lot of flexibility in the shape and locations to define them.</p><p>Now, here's how you would merge them into a DataScript database:</p><pre><code class="clojure">;;;; Writing this metadata to a DataScript db
+&#40;require '&#91;datascript.core :as dt&#93;&#41;
+
+&#40;def meta-schema
+  {:twitteur.entity-type/name {:db/unique :db.unique/identity}
+   :twitteur.entity-type/attributes {:db/valueType :db.type/ref
+                                     :db/cardinality :db.cardinality/many}
+   :twitteur.attribute/name {:db/unique :db.unique/identity}
+   :twitteur.attribute.ref-typed/type {:db/valueType :db.type/ref
+                                       :db/cardinality :db.cardinality/one}}&#41;
+
+&#40;defn empty-model-db
+  &#91;&#93;
+  &#40;let &#91;conn &#40;dt/create-conn meta-schema&#41;&#93;
+    &#40;dt/db conn&#41;&#41;&#41;
+
+&#40;def model-db
+  &quot;A DataScript database value, holding a representation of our Domain Model.&quot;
+  &#40;dt/db-with
+    &#40;empty-model-db&#41;
+    ;; Composing DataScript transactions is as simple as that: concat
+    &#40;concat
+      user-model
+      tweet-model&#41;&#41;&#41;
+</code></pre>  <br /><p>We can now leverage all the power of DataScript to query our Domain Model, which makes it much easier to generate   the 'machine-aspects' system components we need. Here's an example REPL session demonstrating this sort of queries:</p><pre><code class="clojure">;;;; Let's query this a bit
+&#40;comment
+  ;; What are all the attributes names in our Domain Model ?
+  &#40;sort
+    &#40;dt/q
+      '&#91;:find &#91;?attrName ...&#93; :where
+        &#91;?attr :twitteur.attribute/name ?attrName&#93;&#93;
+      model-db&#41;&#41;
+  =&gt; &#40;:tweet/author :tweet/content :tweet/id :tweet/time :user/email :user/follows :user/id :user/n&#95;followers :user/name&#41;
+
+  ;; What do we know about :tweet/author?
+  &#40;def tweet-author-attr
+    &#40;dt/entity model-db &#91;:twitteur.attribute/name :tweet/author&#93;&#41;&#41;
+
+  tweet-author-attr
+  =&gt; {:db/id 10}
+
+  &#40;dt/touch tweet-author-attr&#41;
+  =&gt;
+  {:twitteur.schema/doc &quot;The Twitteur user who wrote this Tweet.&quot;,
+   :twitteur.attribute/name :tweet/author,
+   :twitteur.attribute/ref-typed? true,
+   :twitteur.attribute.ref-typed/many? false,
+   :twitteur.attribute.ref-typed/type {:db/id 1},
+   :db/id 10}
+
+  &#40;-&gt; tweet-author-attr :twitteur.attribute.ref-typed/type dt/touch&#41;
+  =&gt;
+  {:twitteur.schema/doc &quot;a User is a person who has signed up to Twitteur.&quot;,
+   :twitteur.entity-type/attributes #{{:db/id 4} {:db/id 6} {:db/id 3} {:db/id 2} {:db/id 5}},
+   :twitteur.entity-type/name :twitteur/User,
+   :db/id 1}
+
+  ;; What attributes have type :twitteur/User?
+  &#40;dt/q '&#91;:find ?attrName ?to-many? :in $ ?type :where
+          &#91;?attr :twitteur.attribute.ref-typed/type ?type&#93;
+          &#91;?attr :twitteur.attribute/name ?attrName&#93;
+          &#91;?attr :twitteur.attribute.ref-typed/many? ?to-many?&#93;&#93;
+    model-db &#91;:twitteur.entity-type/name :twitteur/User&#93;&#41;
+  =&gt; #{&#91;:tweet/author false&#93; &#91;:user/follows true&#93;}
+
+  ;; What attributes are derived, and therefore should not be stored in the database?
+  &#40;-&gt;&gt;
+    &#40;dt/q '&#91;:find &#91;?attr ...&#93; :where
+            &#91;?attr :twitteur.attribute/derived? true&#93;&#93;
+      model-db&#41;
+    &#40;map #&#40;dt/entity model-db %&#41;&#41;
+    &#40;sort-by :twitteur.attribute/name&#41;
+    &#40;mapv dt/touch&#41;&#41;
+  =&gt;
+  &#91;{:twitteur.schema/doc &quot;The tweets posted by this user.&quot;,
+    :twitteur.attribute/derived? true,
+    :twitteur.attribute/name :user/follows,
+    :twitteur.attribute/ref-typed? true,
+    :twitteur.attribute.ref-typed/many? true,
+    :twitteur.attribute.ref-typed/type {:db/id 7},
+    :db/id 5}
+   {:twitteur.schema/doc &quot;How many users follow this user.&quot;,
+    :twitteur.attribute/derived? true,
+    :twitteur.attribute/name :user/n&#95;followers,
+    :twitteur.attribute/ref-typed? false,
+    :twitteur.attribute.ref-typed/many? true,
+    :twitteur.attribute.scalar/type :long,
+    :db/id 6}&#93;
+
+  ;; What attributes are private, and therefore should not be exposed publicly?
+  &#40;set
+    &#40;dt/q '&#91;:find &#91;?attrName ...&#93; :where
+            &#91;?attr :twitteur.attribute.security/private? true&#93;
+            &#91;?attr :twitteur.attribute/name ?attrName&#93;&#93;
+      model-db&#41;&#41;
+  =&gt; #{:user/email}
+  &#41;
+</code></pre><p>It's really important to understand that the DataScript database value is <i>not</i> a hidden implementation detail here:  <strong>the database <i>is</i> the API</strong>. Not only is our Domain Model programmatically accessible, but we didn't even have   to make a custom API for it: we already have the DataScript query API for that. This makes our Domain Model Representation   both <strong>a good programming substrate and an effective communication medium.</strong></p><p>To make your system more transparent you may want to add another 'refinement' step before generating the system components,  which consists of enriching the meta-database with facts about the Machine Aspects. This way, you can even query the meta-database  about how your Domain Model got translated into system components. The logic for this refinement step is quite reminiscent   of deductive rule engines - for instance "if an Attribute A is not derived, then there is a Datomic schema transaction   for an attribute of the same type as A".</p><p>  <img src="/img/domain-representation-to-machine-execution-with-refinement.png" width="100%"></img></p><p>Finally, as you may have noticed, our <i>Domain Model assertions</i> code above is quite verbose and difficult to read.  You may get around this issue by generating appropriate visualizations from the meta-database (e.g HTML pages or GraphViz);  but it's also quite straightforward to make a small ad hoc DSL to make the code more concise and contrasted:   <br />     </p><pre><code class="clojure">;;;; Let's make our schema code more readable,
+;;;; by using some concision helpers
+
+&#40;require '&#91;twitteur.utils.model.dml :as dml&#93;&#41;
+
+&#40;def user-model
+  &#91;&#40;dml/entity-type :twitteur/User
+     &quot;a User is a person who has signed up to Twitteur.&quot;
+     {:twitteur.entity-type/attributes
+      &#91;&#40;dml/scalar :user/id :uuid &#40;dml/unique-id&#41; &quot;The unique ID of this user.&quot;&#41;
+       &#40;dml/scalar :user/email :string &#40;dml/private&#41; &quot;The email address of this user &#40;not visible to other users&#41;.&quot;&#41;
+       &#40;dml/scalar :user/name :string &quot;The public name of this user on Twitteur.&quot;&#41;
+       &#40;dml/to-many :user/follows :twitteur/User &quot;The Twitteur users whom this user follows.&quot;&#41;
+       &#40;dml/scalar :user/n&#95;followers :long &#40;dml/derived&#41; &quot;How many users follow this user.&quot;&#41;
+       &#40;dml/to-many :user/tweets :twitteur/Tweet &#40;dml/derived&#41; &quot;The tweets posted by this user.&quot;&#41;
+       &#93;}&#41;&#93;&#41;
+
+&#40;def tweet-model
+  &#91;&#40;dml/entity-type :twitteur/Tweet
+     &quot;a Tweet is a short message posted by a User on Twitteur, published to all her Followers.&quot;
+     {:twitteur.entity-type/attributes
+      &#91;&#40;dml/scalar :tweet/id :uuid &quot;The unique ID of this Tweet&quot; &#40;dml/unique-id&#41;&#41;
+       &#40;dml/scalar :tweet/content :string &quot;The textual message of this Tweet&quot;&#41;
+       &#40;dml/to-one :tweet/author :twitteur/User &quot;The Twitteur user who wrote this Tweet.&quot;&#41;
+       &#40;dml/scalar :tweet/time :long &quot;The time at which this Tweet was published, as a timestamp.&quot;&#41;
+       &#93;}&#41;&#93;&#41;
+
+;; Note that there's no macro magic above: user-model and tweet-model are still plain data structures,
+;; we just use the dml/... functions to assemble them in a more readable way.
+;; In particular, you can evaluate any sub-expression above in the REPL and see exactly
+;; how it translates to a data structure.
+</code></pre><p>The <code>dml/...</code> helper functions used in the above snippet are defined <a href='https://github.com/vvvvalvalval/datascript-declarative-model-example/blob/master/src/twitteur/utils/model/dml.clj#L1'>here</a>.</p><h2 id="tradeoffs&#95;and&#95;limitations">Tradeoffs and limitations</h2> <p>Now that we've described the approach, the question that remains is: 'Should I adopt it?'. We'll discuss this question   from a few different perspectives.   </p><h3 id="prior&#95;art">Prior art</h3>  <br /><p>The idea of writing a representation of the Domain Model in declarative form and automatically deriving machine behaviour   from that is not new. There's a number of popular solutions in the industry in which this idea is embodied:  </p><ul><li><strong>Database DMLs</strong> (Data Modeling Languages) e.g in SQL: you describe the shape of your data, and sometimes can query it.</li><li><strong>ORMs</strong> (Object-Relational Mappers) like ActiveRecord / Hibernate, and more generally <strong>class-based frameworks</strong>: you represent your 'model' as a class and use class annotations or various metaprogramming features to make your Domain Model assertions</li><li><strong>API schemas</strong>, like GraphQL schemas for GraphQL, OpenAPI for REST and WSDL for SOAP, also rely on a data representation of some part of your Domain Model</li></ul><p>I see a number of drawbacks to using these solutions as the representation for your Domain Model.</p><p>First, they tend to have a very <strong>biased and incomplete perspective of your system</strong>.  ORMs and DMLs only talk about your domain in the perspective of data persistence and integrity;   API schemas only talk about your domain in the perspective of data exchange and validation.  I think you lose many benefits of the Domain-Model-in-program approach once your representation stops being all-encompassing.  </p><p>Second, they tend to be <strong>not very programmable,</strong> especially class-based tools like ORMs.  They're usually not portable across runtimes (e.g accessible to both client and server code), they don't offer the   composable, data-based writes and powerful querying features of DataScript, and are usually not open to extensions.</p><p>Third, and related to programmability, they often are <strong>not very transparent or tangible.</strong> When you write annotations in a class,  you don't get a query API to inspect / explore the implications of that annotation; all you get to do is read the documentation   and / or reverse-engineer them from the external behaviour of the system. In particular, even if your framework provides useful   logic to process your Domain Model assertions, you can't really reuse nor rely on that logic to complement that framework  for your own needs. </p><p>Finally, I think that these frameworks, because of their genericity, suffer from the fundamental limitation that they  <strong>don't know and cannot know the language of your domain, nor its implications on your software system.</strong> These frameworks enable your to   address machine aspect with a domain-first approach, but as a byproduct they impose on you a representation of your Domain Model,  and assumptions about the implications in terms of machine aspects. The more advanced your system, the more likely it is that  your framemork of choice will be a misfit for it.   You don't have this problem with DataScript, which only imposes a representation <i>medium</i> for your Domain Model -   one that offers a lot of leverage and few constraints, as we've seen.</p><h3 id="plumbing-first&#95;vs&#95;domain-first">Plumbing-first vs Domain-first</h3><p>I think there are essentially 2 approaches to developing software, each with their own merits, which I'd call <i>plumbing-first</i> and <i>domain-first</i>.</p><p><strong>Plumbing-first</strong> consists of programming by starting with 'mechanical' components - HTTP routes, database queries, etc. -  shaping them until the program's behaviour meets the requirements of the Domain.  </p><p>A plumbing-first approach makes for early successes, and is generally a good approach when the Domain is not well-known or very simple.  Of course, the downside is accidental complexity, as well as the problems we mentioned above such as over-specificity and   an implicit, scattered domain model.</p><p><strong>Domain-first</strong> consists of programming by coding a declarative representation of the Domain Model,   then building a generic interpreter (in the broad sense - you don't have to create a new programming language for that)  which executes that representation.</p><p>A domain-first approach has the advantage of keeping the domain-specific code focused on the essential, and of making   the machine-specific code relatively concise and very generic, but alse more abstract; in particular, you are combatting   complexity by adopting home-made abstractions, and that means that the development team must be willing to learn new abstractions.  </p><p>The approach we're describing is this article is definitely domain-first.</p><h3 id="adaptable&#95;vs&#95;principled">Adaptable vs Principled</h3><p>In his excellent book <i><a href='https://leanpub.com/elementsofclojure'>Elements of Clojure</a></i>, Zach Tellman draws a distinction between  <strong>principled</strong> and <strong>adaptable</strong> systems of abstractions:  </p><blockquote><p> We can build a <strong>principled</strong> system, which enforces predictable relationships between its abstractions.  Alternately, we can build an <strong>adaptable</strong> system, which has sparse and flexible relationships between its abstractions.<br /></p></blockquote><p>In his talk <a href='https://www.youtube.com/watch?v=x9pxbnFC4aQ&feature=youtu.be&t=31m42s'>On Abstraction</a>,   Zach Tellman then presents the following tradeoffs to principled or adaptable systems:</p><p> <a href="https://youtu.be/x9pxbnFC4aQ?t=31m42s" target="_blank"><img src="/img/principled-adaptable-tradeoffs.png" width="100%"></img></a></p><p>My understanding of this is that the approach discussed in this article is <i>principled.</i> We gain predictability and save work  by enforcing an organizing principle about how our Domain Model should be expressed and interpreted, while making a strong  assumption of regularity in our domain requirements.</p><p>Zach Tellman suggests that we can cope with the brittleness of principled components by embedding them in an adaptable 'framework' or 'glue',  and in particular by leaving some space between principled components and the periphery of our systems. You should leave   'espace hatches' for edge cases where your Domain Model representation becomes insufficient; for instance, you should preserve the ability  to exceptionnaly define some GraphQL fields or database attributes or REST endpoints without going through your Domain Model representation.   </p><h3 id="you're&#95;in&#95;the&#95;business&#95;of&#95;framework-authoring">You're in the business of framework-authoring</h3><p>The way I see it, if you're adopting the approach described in this post, you're going down the road of building a homemade framework.  That's not necessary a bad thing, because your homemade framework makes assumptions that are by definition aligned with your use case,  and it doesn't need to have the crazy ambitions of the more popular frameworks we see out there (for instance, it doesn't have to pretend  to solve the Object-Relational Impedance Mismatch, or reinvent the web, or try to hide distributed system issues behind method calls, etc.)  </p><p>By 'framework', I really mean a set of programmatically-enforced decisions about application architecture. In this sense,   I think making your own framework is viable if you don't try to solve impossible problems, and don't make your assumptions  too broad. In particular, as you can see, I'm not offering any library to embody the approach described in this post, because  I think it would do more harm than good: the entire point is that you, only you, can know how your system should be described in domain terms.  </p><p>Still, even if it pays on the long-term, making a framework is not a light endeavour, and if you're going to do it at all  you should <strong>do it thoroughly:</strong></p><ul><li><strong><a href='https://www.youtube.com/watch?v=f84n5oFoZBc'>Think it through</a></strong></li><li><strong>Test it well</strong></li><li><strong>Document it well.</strong> In particular, it's incredibly easy to generate HTML documentation (à la JavaDoc) from a DataScript-backed meta-database. This can be a effective strategy to make documentation that is less likely to become stale, and uses your Domain Model  as its own example, making it more accessible to newcomers.</li></ul><h2 id="experience&#95;report:&#95;bandsquare">Experience report: BandSquare</h2><p><a href='https://www.bandsquare.com/'>BandSquare</a> is a SaaS platform for creating and analyzing marketing campaigns and surveys.  We have applied this approach to BandSquare's backend code for more than 18 months now; at the time of writing,   our Domain Model Representation features over 80 Entity Types and 450 Attributes. The main Machine Aspects we address   are generating GraphQL(ish) schema and handlers, Datomic schema transactions, security rules, and documentation; we're  considering adding more, such as change detection for ETL.</p><p>Overall, this approach has been a significant improvement to BandSquare's development. We've found that:</p><ul><li>BandSquare's domain of a 'platform' is a good fit for this approach, as we want to extend the platform to new use cases while leveraging as much of the existing code as possible.</li><li>The fact that Datomic and GraphQL are conceptually close has been quite helpful in implementing it.</li></ul><h2 id="annex:&#95;a&#95;datascript&#95;refresher">Annex: a DataScript refresher</h2><p><a href='https://github.com/tonsky/datascript'>DataScript</a> is an in-memory data structure, with similar read and write APIs to a Datomic database. As such, DataScript   can be compared to other collections:</p><p>  <img src="/img/datascript-api-comparison.png" width="100%"/>   </p><p>With that in mind, check out this <strong><a href='https://github.com/vvvvalvalval/datascript-declarative-model-example/blob/master/src/datascript_demo.clj#L1'>DataScript Demo</a></strong>  to get a better understanding of how DataScript works.</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/Architecture.html">Architecture</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a lingua franca for domain modeling</a></li>
+                        
+                        <li><a href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant</a></li>
+                        
+                        <li><a href="/posts/2018-01-06-so-yeah-about-clojures-syntax.html">So yeah, about Clojure&#39;s syntax...</a></li>
+                        
+                        <li><a href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Using PostgreSQL temporary views for expressing business logic</a></li>
+                        
+                        <li><a href="/posts/what-makes-a-good-repl.html">What makes a good REPL?</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>

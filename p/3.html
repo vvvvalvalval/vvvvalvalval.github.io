@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
     <meta charset="utf-8"/>
-    <title>Val on Programming: Productive Git setup</title>
+    <title>Val on Programming</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
           type='text/css'>
@@ -51,70 +51,25 @@
             <div id="content">
                 
 <div id="post">
+    
     <div class="post-header">
-    <div id="post-meta" class="row">
-        <div class="col-lg-6">September 6, 2015</div>
-        
+        <h2>Having a good terminal console on OS X in 2015</h2>
+        <div id="post-meta">
+            
+            <div class="date">September 6, 2015</div>
+        </div>
     </div>
-    <h2>Productive Git setup</h2>
-</div>
-<div>
-    <ol class="content"><li><a href="#installing_autocompletion">Installing autocompletion</a></li><li><a href="#defining_aliases">Defining aliases</a></li><ol><li><a href="#for_common_commands">For common commands</a></li><li><a href="#to_print_the_commits_graph">To print the commits graph</a></li></ol><li><a href="#using_a_git_gui_client">Using a git GUI client</a></li></ol>
-    <p>When getting started with Git, you don't always know there exist some trick to make you more productive with it. Here are a few, most of which are already in the <a href='http://git-scm.com/book/en/v1/Git-Basics-Tips-and-Tricks'>official documentation</a>.</p><h2 id="installing&#95;autocompletion">Installing autocompletion</h2> <p>When working with git from the command-line, it's very useful to have autocompletion for your branch/remote names, git commands, etc. Fortunately, there is a bash script for that.  </p><p><!&ndash;more&ndash;>  </p><p>To achieve this, download <a href='https://raw.githubusercontent.com/git/git/master/contrib/completion/git-completion.bash'>this file</a>, put it under your home directory under the name .git-completion.bash, then reference it from your bash initialization file (either ~/.bash_profile or ~/.bashrc) :  </p><pre><code>source &#126;/.git-completion.bash
-</code></pre> <h2 id="defining&#95;aliases">Defining aliases</h2> <h3 id="for&#95;common&#95;commands">For common commands</h3> <p>Commands like <code>commit</code>, <code>branch</code>, `checkout are so common that it's useful to type them with fewer characters.  To do so, you create git <i>aliases</i> by typing the following commands in a terminal :  </p><pre><code>git config --global alias.co checkout   
-git config --global alias.br branch   
-git config --global alias.ci commit   
-git config --global alias.st status
-</code></pre> <p>Once you have done this, you can type co, br, ci, st every time you would normaly type checkout, branch, commit, status.  </p><h3 id="to&#95;print&#95;the&#95;commits&#95;graph">To print the commits graph</h3> <p>The following alias will enable you print a pretty representation of the commits graph in your terminal window :</p><pre><code>git config --global alias.lg &quot;log --graph --all --pretty=format:'%C&#40;bold&#41;%h%Creset -%C&#40;auto&#41;%d%Creset %s %C&#40;green dim&#41;&#40;%cr&#41;%Creset %C&#40;ul&#41;&lt;%an&gt;&quot;  
-`</code></pre> <p>Now, typing <code>git lg</code> in your repository will print something like this :   </p><p><img src="/img/git-lg-screenshot.png" width="100%">  </p><p>The effect of setting aliases is to modify your ~/.gitconfig file, which should now look like this :</p><pre><code>   &#91;user&#93;  
-       name = Valentin Waeselynck  
-       email = val@bandsquare.fr  
-  &#91;alias&#93;  
-       lg = log --graph --all --pretty=format:'%C&#40;bold&#41;%h%Creset -%C&#40;auto&#41;%d%Creset %s %C&#40;green dim&#41;&#40;%cr&#41;%Creset %C&#40;ul&#41;&lt;%an&gt;'  
-       co = checkout  
-       br = branch  
-       ci = commit  
-       st = status  
-  &#91;core&#93;  
-       editor = vim   
-  &#91;filter &quot;media&quot;&#93;  
-       clean = git media clean %f  
-       smudge = git media smudge %f  
-       required = true  
-</code></pre> <h2 id="using&#95;a&#95;git&#95;gui&#95;client">Using a git GUI client</h2> <p>Working from the command line with the above config is enough for 95% of my everyday work.  But sometimes, I need a better visualisation tool (e.g for diffs) in my local environment, so I also use <a href='https://www.sourcetreeapp.com/'>SourceTree</a>.</p>
-</div>
-
-<div id="post-tags">
-    <b>Tags: </b>
+     <p>As a programmer, your terminal console is part of your everyday life.  That's where you launch your local server, start your database, see your heroku logs, try out that mysterious command you found on some forum, etc.  Don't try to escape it; instead, learn to master it and make it comfortable enough that you feel at home using it.  </p>
+    <a href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Continue reading &#8594;</a>
+    <hr>
     
-    <a href="/tools.html">tools</a>
-    
-    <a href="/tutorial.html">tutorial</a>
-    
-</div>
-
 
     <div id="prev-next">
         
-        <a href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">&laquo; A bottom-up approach to state in Reagent</a>
+        <a class="left" href="/p/2.html">&laquo; Prev</a>
         
-        
-        <a class="right" href="/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html">Having a good terminal console on OS X in 2015 &raquo;</a>
         
     </div>
-
-    
-    <div id="disqus_thread"></div>
-    <script type="text/javascript">
-        (function() {
-            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
-            dsq.src = '//valonprogramming.disqus.com/embed.js';
-            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
-        })();
-    </script>
-    
-
-
 </div>
 
             </div>
