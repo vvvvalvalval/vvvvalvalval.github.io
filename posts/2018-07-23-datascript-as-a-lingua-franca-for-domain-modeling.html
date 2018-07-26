@@ -2,7 +2,7 @@
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
 <head>
     <meta charset="utf-8"/>
-    <title>Val on Programming: DataScript as a lingua franca for domain modeling</title>
+    <title>Val on Programming: DataScript as a Lingua Franca for domain modeling</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
           type='text/css'>
@@ -56,7 +56,7 @@
         <div class="col-lg-6">July 23, 2018</div>
         
     </div>
-    <h2>DataScript as a lingua franca for domain modeling</h2>
+    <h2>DataScript as a Lingua Franca for domain modeling</h2>
 </div>
 <div>
     <ol class="content"><li><a href="#the_approach">The approach</a></li><ol><li><a href="#the_domain_model">The Domain Model</a></li><li><a href="#the_&apos;machine_aspects&apos;">The 'Machine Aspects'</a></li><li><a href="#the_problem">The problem</a></li><li><a href="#from_domain_representation_to_machine_execution">From domain representation to machine execution</a></li><li><a href="#enter_datascript">Enter DataScript</a></li></ol><li><a href="#tradeoffs_and_limitations">Tradeoffs and limitations</a></li><ol><li><a href="#prior_art">Prior art</a></li><li><a href="#plumbing-first_vs_domain-first">Plumbing-first vs Domain-first</a></li><li><a href="#adaptable_vs_principled">Adaptable vs Principled</a></li><li><a href="#you&apos;re_in_the_business_of_framework-authoring">You're in the business of framework-authoring</a></li></ol><li><a href="#experience_report:_bandsquare">Experience report: BandSquare</a></li><li><a href="#annex:_a_datascript_refresher">Annex: a DataScript refresher</a></li></ol>
@@ -228,7 +228,7 @@
       model-db&#41;&#41;
   =&gt; #{:user/email}
   &#41;
-</code></pre><p>It's really important to understand that the DataScript database value is <i>not</i> a hidden implementation detail here:  <strong>the database <i>is</i> the API</strong>. Not only is our Domain Model programmatically accessible, but we didn't even have   to make a custom API for it: we already have the DataScript query API for that. This makes our Domain Model Representation   both <strong>a good programming substrate and an effective communication medium.</strong></p><p>To make your system more transparent you may want to add another 'refinement' step before generating the system components,  which consists of enriching the meta-database with facts about the Machine Aspects. This way, you can even query the meta-database  about how your Domain Model got translated into system components. The logic for this refinement step is quite reminiscent   of deductive rule engines - for instance "if an Attribute A is not derived, then there is a Datomic schema transaction   for an attribute of the same type as A".</p><p>  <img src="/img/domain-representation-to-machine-execution-with-refinement.png" width="100%"></img></p><p>Finally, as you may have noticed, our <i>Domain Model assertions</i> code above is quite verbose and difficult to read.  You may get around this issue by generating appropriate visualizations from the meta-database (e.g HTML pages or GraphViz);  but it's also quite straightforward to make a small ad hoc DSL to make the code more concise and contrasted:   <br />     </p><pre><code class="clojure">;;;; Let's make our schema code more readable,
+</code></pre><p>As an example, <a href='https://github.com/vvvvalvalval/datascript-declarative-model-example/blob/master/src/twitteur/lib/graphql.clj'><strong>here</strong></a>'s  what generating a GraphQL schema could look like (for the <a href='http://lacinia.readthedocs.io/en/latest/overview.html#schema'>Lacinia</a> library,   which is a Clojure GraphQL wrapper).</p><p>It's really important to understand that the DataScript database value is <i>not</i> a hidden implementation detail here:  <strong>the database <i>is</i> the API</strong>. Not only is our Domain Model programmatically accessible, but we didn't even have   to make a custom API for it: we already have the DataScript query API for that. This makes our Domain Model Representation   both <strong>a good programming substrate and an effective communication medium.</strong></p><p>To make your system more transparent you may want to add another 'refinement' step before generating the system components,  which consists of enriching the meta-database with facts about the Machine Aspects. This way, you can even query the meta-database  about how your Domain Model got translated into system components. The logic for this refinement step is quite reminiscent   of deductive rule engines - for instance "if an Attribute A is not derived, then there is a Datomic schema transaction   for an attribute of the same type as A".</p><p>  <img src="/img/domain-representation-to-machine-execution-with-refinement.png" width="100%"></img></p><p>Finally, as you may have noticed, our <i>Domain Model assertions</i> code above is quite verbose and difficult to read.  You may get around this issue by generating appropriate visualizations from the meta-database (e.g HTML pages or GraphViz);  but it's also quite straightforward to make a small ad hoc DSL to make the code more concise and contrasted:   <br />     </p><pre><code class="clojure">;;;; Let's make our schema code more readable,
 ;;;; by using some concision helpers
 
 &#40;require '&#91;twitteur.utils.model.dml :as dml&#93;&#41;
@@ -307,7 +307,7 @@
                     <h3>Recent Posts</h3>
                     <ul>
                         
-                        <li><a href="/posts/datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a lingua franca for domain modeling</a></li>
+                        <li><a href="/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a Lingua Franca for domain modeling</a></li>
                         
                         <li><a href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant</a></li>
                         
