@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Datomic: Event Sourcing without the hassle</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">November 12, 2018</div>
+        
+    </div>
+    <h2>Datomic: Event Sourcing without the hassle</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#why_event_sourcing?">Why Event Sourcing?</a></li><li><a href="#how_event_sourcing_is_usually_done">How Event Sourcing is usually done</a></li><li><a href="#difficulties_of_conventional_event_sourcing">Difficulties of conventional Event Sourcing</a></li><ol><li><a href="#designing_event_types_and_event_handlers_is_hard_work">Designing Event Types and Event Handlers is hard work</a></li><li><a href="#detecting_indirect_changes_is_still_hard">Detecting indirect changes is still hard</a></li><li><a href="#transactionality_is_difficult_to_achieve">Transactionality is difficult to achieve</a></li><li><a href="#conflating_commands_and_events">Conflating Commands and Events</a></li></ol><li><a href="#how_datomic_does_it">How Datomic does it</a></li><ol><li><a href="#datomic&apos;s_model">Datomic's model</a></li><li><a href="#processing_events_with_datomic">Processing Events with Datomic</a></li><li><a href="#cost-benefit_analysis">Cost-benefit analysis</a></li></ol><li><a href="#conclusion">Conclusion</a></li><li><a href="#see_also">See also</a></li></ol>
+    <p><img style="text-align:center;" src="/img/chess-both-incremental-and-absolute.png" width="100%"></p><p>When I got started using the <a href='https://www.datomic.com'>Datomic</a> database, I remember someone describing it to me as 'Event Sourcing without the hassle'. Having built Event Sourcing systems both with and without Datomic, I think this is very well put, although it might not be obvious, especially if you don't have much experience with Datomic.</p><p>In this article, we'll describe briefly what Event Sourcing is, how it's conventionally implemented, analyze the limitations of that, and contrast that with how Datomic enables you to achieve the same benefits. We'll see that, for most use cases, Datomic enables us to implement Event Sourcing with much less effort, and (more importantly) with more agility. <span class="sn">By which I mean: less anticipation / planning</span></p><p><strong>Note:</strong> I'm not affiliated to the Datomic team in any way other than being a user of Datomic.  </p><h2 id="why&#95;event&#95;sourcing?">Why Event Sourcing?</h2><p>As of today, most information systems are implemented with a centralized database storing the 'current state'  (or you might say 'current knowledge') of the system. This database is usually a big mutable shared data structure, supported by database systems such as PostgreSQL / MongoDB / ElasticSearch / ... or a combination of those.   </p><p>For instance, a Q&A website such as <a href='https://stackoverflow.com/'>StackOverflow</a> could be backed with a SQL database, with tables  such as <code>Question</code>, <code>Answer</code>, <code>User</code>, <code>Comment</code>, <code>Tag</code>, <code>Vote</code> etc.</p><p>When all the data you have is about the 'current state' of the system, you can only ask questions about the   present (Examples: "What's the title of Question 42?" / "Has User 23 answered Question 56?" / etc.). But it turns out you may have important questions that are not about the present:  </p><ul><li><strong>How did we get there?</strong> What's the sequence of events which led you to the current state?  This is useful for audit trails, analytics, etc. (Example: "How many times times do Users typically change the content of a Question?")</li><li><strong>How was the state previously?</strong> Especially useful for investigating bugs. (Example: "What were the Tags associated with Question 38 last Monday at 6:23pm?")</li><li><strong>What changed recently?</strong> Useful for reacting to change, and in particular for propagating novelty. (Examples: "What Questions have been affected by changes (directly or not) in the last 6 hours?" / "What events have caused the Reputation of User 42 to evolve in the last minute?")</li></ul><p><a href='https://martinfowler.com/eaaDev/EventSourcing.html'>Event Sourcing</a> is an architectural approach designed   to address such questions.  <strong>Event Sourcing consists of keeping track not of the current state, but of the entire sequence of <i>state transitions</i> which led to it.</strong>  These state transitions are called <i>Events</i>, and are the "source of truth" of the system, from which the current state  (or any past state) is inferred (hence the name <i>Event Sourcing</i>).  </p><p><div style="text-align:center;"><img src="/img/event-sourcing-chess.png" width="100%"></div> </p><p>The sequence of events is stored in an <i>Event Log</i>, and it's important to understand that this Event Log  is <i>accumulate-only</i>: events are (normally) only ever appended to the Log, never modified or erased.</p><p><strong>Benefits of Event Sourcing:</strong></p><ul><li><strong>You don't lose information</strong> (since you only ever add to the data you have already written); in particular, it's possible to <strong>reproduce a past state</strong> of the system.</li><li><strong>Data synchronization</strong> is easier: since you can determine what data has been recently added, you can propagate novelty to other components of the system, which lets you build <strong>materialized views</strong> (e.g representing your data in search or analytics-optimized query engines such as ElasticSearch), send <strong>notifications</strong> (e.g to a browser UI), etc. </li></ul><h2 id="how&#95;event&#95;sourcing&#95;is&#95;usually&#95;done">How Event Sourcing is usually done</h2><p>At the time of writing, the conventional way of implementing Event Sourcing is as follows:</p><ul><li>You design a set of <strong>Event Types</strong> suited to your domain. (For instance: <code>UserCreatedQuestion</code>, <code>UserUpdatedQuestion</code>, <code>UserCreatedAnswer</code>, <code>UserVotedOnQuestion</code>, etc.).</li><li>Each <strong>Event</strong> is a record containing an Event Type, a timestamp (when it was added to the Log), and data attributes specific to that Event Type (e.g <code>question&#95;id</code>, <code>user&#95;id</code> etc.).</li><li>Downstream of the Event Log, events are processed by <strong>Event Handlers</strong> to maintain <strong>Aggregates</strong> of the data (for instance, a document store containing one document per Question),  or trigger <strong>Reactions</strong> to events (e.g sending an email to a User when one of her questions was answered). Importantly, for technological reasons, this processing of events is typically <strong>asynchronous</strong>,  with the implication that the Aggregates are at best <strong>eventually consistent</strong> with the Log  (Aggregates "lag behind" the Log). </li></ul><p><img style="text-align:center;" src="/img/event-sourcing-schema.png" width="100%"> <div style="text-align: center"><small><i>Event Handlers process the Event Log sequentially to maintain Aggregates</i></small></div> </p><p>Back to our Q&A example, here's what some events could look like in EDN format:</p><pre><code class="clojure">&#40;{:event&#95;type :UserCreatedQuestion
+  :event&#95;time #inst &quot;2018-11-07T15:32:09&quot;
+  :user&#95;id &quot;jane-hacker3444&quot;
+  :question&#95;id &quot;what-is-event-sourcing-3242599&quot;
+  :question&#95;title &quot;What is Event Sourcing&quot;
+  :question&#95;body &quot;I've heard a lot about Event Sourcing but not sure what it's for exactly, could someone explain?&quot;
+  :question&#95;tags &#91;&quot;Programming&quot;&#93;}
+ ;; ...
+ {:event&#95;type :UserUpdatedQuestion
+  :event&#95;time #inst &quot;2018-11-07T15:32:54&quot;
+  :user&#95;id &quot;jane-hacker3444&quot;
+  :question&#95;id &quot;what-is-event-sourcing-3242599&quot;
+  :question&#95;title &quot;What is Event Sourcing?&quot;}
+ ;; ...
+ {:event&#95;type :UserCreatedAnswer
+  :event&#95;time #inst&quot;2018-11-08T14:16:33.825-00:00&quot;
+  :user&#95;id &quot;alice-doe32099&quot;
+  :question&#95;id &quot;what-is-event-sourcing-3242599&quot;
+  :answer&#95;id #uuid&quot;af1722d5-c9bb-4ac2-928e-cf31e77bb7fa&quot;
+  :answer&#95;body &quot;Event Sourcing is about &#91;...&#93;&quot;}
+ ;; ...
+ {:event&#95;type :UserVotedOnQuestion
+  :event&#95;time #inst&quot;2018-11-08T14:19:31.855-00:00&quot;
+  :user&#95;id &quot;bob980877&quot;
+  :question&#95;id &quot;what-is-event-sourcing-3242599&quot;
+  :vote&#95;direction :vote&#95;up}&#41;
+</code></pre><p>In this sequence of events, User <code>&quot;jane-hacker3444&quot;</code> created a Question about Event Sourcing,   then updated it, presumably to correct its title. User <code>&quot;alice-doe32099&quot;</code> then created an Answer  to that Question, and User <code>&quot;bob980877&quot;</code> upvoted the Question.  </p><p>This could feed an Aggregate representing questions as JSON-like documents, such as:</p><pre><code class="json">{
+  &quot;question&#95;id&quot;: &quot;what-is-event-sourcing-3242599&quot;,
+  &quot;question&#95;title&quot;: &quot;What is Event Sourcing?&quot;,
+  &quot;question&#95;body&quot;: &quot;I've heard a lot about Event Sourcing but not sure what it's for exactly, could someone explain?&quot;,
+  &quot;question&#95;tags &quot;:&#91;&quot;Programming&quot;&#93;,
+  &quot;question&#95;n&#95;upvotes&quot;: 1,
+  &quot;question&#95;n&#95;downvotes&quot;: 0,
+  &quot;question&#95;author&quot;: {
+    &quot;user&#95;id&quot;: &quot;jane-hacker3444&quot;,
+    &quot;user&#95;name&quot;: &quot;Jane P. Hacker&quot;,
+    &quot;user&#95;reputation&quot;: 32342
+  },
+  &quot;question&#95;answers&quot;: &#91;{
+    &quot;answer&#95;id&quot;: &quot;af1722d5-c9bb-4ac2-928e-cf31e77bb7fa&quot;,
+    &quot;answer&#95;body&quot;: &quot;Event Sourcing is about &#91;...&#93;&quot;,
+    &quot;answer&#95;author&quot;: {
+      &quot;user&#95;id&quot;: &quot;bob980877&quot;,
+      &quot;user&#95;name&quot;: &quot;Bobby&quot;,
+      &quot;user&#95;reputation&quot;: 12665
+    }
+  }&#93;
+}
+</code></pre><h2 id="difficulties&#95;of&#95;conventional&#95;event&#95;sourcing">Difficulties of conventional Event Sourcing</h2><p>Regardless of the implementation technologies used (<a href='https://eventstore.org'>EventStore</a> / <a href='https://kafka.apache.org/'>Kafka</a> / plain old SQL...), common difficulties arise from the 'conventional Event Sourcing' approach described above. We'll try to categorize them in this section.</p><h3 id="designing&#95;event&#95;types&#95;and&#95;event&#95;handlers&#95;is&#95;hard&#95;work">Designing Event Types and Event Handlers is hard work</h3><p><strong>Case study: <i>the many ways to update a Question</i></strong> </p><p><i>You're designing the initial version of the Q&A website, and wondering what the proper Event Types should be for updating Questions. You're thinking <code>UserUpdatedQuestion</code>, but maybe that's not granular enough? Should it be the finer-grained <code>UserUpdatedQuestionTitle</code>? But then maybe that'd make too many Event Types to handle, and implementing the Event Handlers will take forever? Should you opt for the more general <code>UserUpdatedFieldOfEntity</code>, but then the Log will become harder to make sense of? Also, since a Question may be changed by someone else than her author, maybe <code>QuestionTitleChanged</code> is a better way to go... but then , how do you track that the action was caused by a User?</i>  </p><p><i>[...]</i></p><p><i>6 months later, the system is in production. Tom, the Key Account Manager, bursts into your office.</i>   <i>"So, there's this high-profile expert I convinced to come answer one of the popular questions, in exchange for an exceptional gift of 500 points of reputation; could you make that happen for tonight?"</i>  <i>You think for a minute. There's no Event type for exceptional changes to reputation.</i>   <i>"I'm sorry," you reply. "For now it's impossible to change the reputation of a User without it coming from votes. We'd need to make a specific development."</i></p><p>In the good old days of the 'current state in one database' approach, all you had to do was design a suitable representation for your state space,  and then you had all the power of a query language to navigate in that space.   For example, in a relational database, you would declare a set of tables and columns, and then you had   all the power of SQL to change the data you stored.  </p><p>Life is not so easy with conventional Event Sourcing, because you have to anticipate every change you're going  to want to apply to your state, design an Event Type for it, and implement the Event Handlers for this Event Type.  <strong>Ad hoc writes</strong> are especially difficult, because any new way to write calls for new code.  </p><p>What's more, <strong>naming, granularity and semantics are hard to get right</strong> when designing Event Types - and you had better get that   right in the first place, because unless you rewrite your Event Log any Event Type will have to be processed by your Event Handlers  for the entire lifetime of your codebase (since re-processing the entire Log is assumed to be a frequent operation).  Too many Event Types may result in more work for implementing Event Handlers; on the other hand, coarse-grained Event Types  are less reusable.  </p><p>I think the lesson here is that <strong>an enumeration of application-defined Event Types is a weak language for describing change.</strong> </p><h3 id="detecting&#95;indirect&#95;changes&#95;is&#95;still&#95;hard">Detecting indirect changes is still hard</h3><p><strong>Case study: <i>linking Question upvotes to User reputation</i></strong> </p><p><i>You're writing the Event Handler for an Aggregate that keeps track of the reputation score of each User: it's a basic key-value store that associates each <code>user&#95;id</code> to a number.</i>  <i>In particular, each time there's an upvote on a Question, it must increment the reputation of the Question's author.</i>  <i>The problem is, in its current form, the <code>UserVotedOnQuestion</code> Event Type does not contain the <code>user&#95;id</code> of the Question's author, only the id of the Question...</i>  </p><p><i>What should you do?</i></p><ul><li><i>Should you change the <code>UserVotedOnQuestion</code> Event Type so that it explicitly contains the id of the author? But that would be redundant, and then who knows how many more things you will want to add later to the Event Types, as you make new Aggregates?</i></li><li><i>Should you change the Aggregate so that it also keeps track of the Question -> User relationship? But that would make it more complex, and is likely to be redundant with the work of other Aggregates...</i></li></ul><p>An Event Log gives you precise data about what changed between 2 points in time; but that does not mean that data is trivially actionable.  To update an Aggregate based on an Event, you need to compute if and how the Event <i>affects</i> the Aggregate.  When dealing with a relational information model, an Event may be about some entity A and indirectly affect another Entity B,  but the relationship between A and B is not apparent in the Event; in the above example, an Event of type <code>UserVotedOnQuestion</code>  affects a User entity without directly referencing it.  <strong>We need query power to determine how an Event affects the downstream Aggregates, but an Event Log on its own offers very little query power.</strong><br /></p><p>There are several strategies to mitigate this problem, all with important caveats:</p><ol><li>You can 'denormalize' the Event Types to add more data to them, effectively doing some pre-computations for the Aggregates.  This means the code that produces the Events needs to anticipate all the ways in which the Events will be consumed - the sort of   coupling we're trying to get away from with Event Sourcing.</li><li>You can enrich each Aggregate to keep track of relational information it needs. This makes Event Handlers more complex to implement, and potentially redundant. </li><li>You can add an 'intermediary' Aggregate that only keeps track of relational information and produces a stream of 'enriched' Events. This is probably better than both solutions above, but it still takes work, and it still needs to be aware of the needs  of all downstream Aggregates.</li></ol><h3 id="transactionality&#95;is&#95;difficult&#95;to&#95;achieve">Transactionality is difficult to achieve</h3><p><strong>Case study: <i>preventing double Answers</i></strong></p><p><i>You're investigating a bug of the Q&A website: some User managed to create 2 Answers to a Question, which is not supposed to happen... Indeed, when a User tries to create the Answer, the code checks via the <code>QuestionsById</code> Aggregate that this User has not yet created an Answer to this Question, and no <code>UserCreatedAnswer</code> Event is emitted if that check fails.</i></p><p><i>You then realize this is caused by a race condition: between the time the 1st Answer was added to the Log  and the time it made its way into the <code>QuestionsById</code> Aggregate, the 2nd Answer was added, thus passing the check...</i>  </p><p><i>'Great', you think. 'I love debugging concurrency issues.'</i> </p><p>Some programs consist only of aggregating information from various data sources, and presenting this information in a new way; analytics dashboards and accounting systems are examples of such programs. Event Sourcing is relatively easy to implement for those. But most systems can't be described so simply. When you buy something on an e-commerce website, you don't just <i>inform them</i> that you are buying something; you <i>request</i> them to make a purchase, and if your payment information is correct and the inventories are not exhausted, then the e-commerce <i>decides</i> to create an order. Even basic administration features can be enough to get you out of the 'only aggregating information' realm. </p><p>Here we see arise the need for <i>transactions</i>, and that's the catch: <strong>transactions are hardly compatible with eventually consistent writes,</strong> which is what you get by default when processing the Event Log asynchronously.</p><p>You can mitigate this issue by having an Aggregate which is updated <i>synchronously</i> with the Event Log.  This means adding an Event is no longer as simple as appending a data record at the end of a queue: you must  atomically do that <i>and</i> update some queryable representation of the current state (e.g a relational database).</p><p>It's also important to realize that transactions are not just for <i>allowing</i> Events into the Log, but also for <i>computing</i> them. For instance, when you order a ticket for a show online, the ticketing system must consult the inventory and <i>choose</i> a seat number for you (even if it's just for adding it to your cart, it must happen transactionally). Which leads us to the distinction between Commands and Events.</p><h3 id="conflating&#95;commands&#95;and&#95;events">Conflating Commands and Events</h3><p>In conventional Event Sourcing, another common approach for addressing the transactionality issues outlined above is to add another sort of Events, which request a change without committing to it. For instance, you could add a <code>UserWantedToCreateAnswer</code> Event, which later on will be processed by an Event Handler that will emit either a <code>UserCreatedAnwser</code> Event or an <code>EventCreationWasRejected</code> Event and add it to the Log; this Event Handler will of course need to maintain an Aggregate to keep track of Answer creations.</p><p>This approach has the advantage of freeing you from some race conditions, but it adds significant complexity. Handling events is now side-effectful and cannot be idempotent. Since those special new Events should be handled exactly once, you will have to be careful when re-processing the Log (see Martin Fowler's <a href='https://martinfowler.com/eaaDev/EventSourcing.html'>article on Event Sourcing</a> for more details on these caveats). Finally, this means you're forcing an asynchronous workflow on the producers of these Events (as in: <i>"Hey, thank you for submitting this form, unfortunately we have no idea if and when your request will be processed. Stay tuned!"</i>). </p><p>To me, this complexity arises from the fact that <strong>conventional Event Sourcing tempts you to forget the essential distinctions between Commands and Events.</strong> A small refresher about these notions:</p><ul><li>A <strong>Command</strong> is a <i>request for change</i>. It's usually formulated in the imperative mood (e.g <code>AddItemToCart</code>). You typically want them to be ephemeral and processed exactly once.</li><li>An <strong>Event</strong>, as we already mentioned, <i>describes a change that happened</i>. It's usually formulated in the past tense and indicative mood (e.g <code>ItemAddedToCart</code>). You typically want them to be durable, and processed as many times as you like.</li><li>From this perspective, a transactional engine is a process which turns Commands into Events.</li></ul><p>Commands and Events play <i>very</i> different roles, and it's no surprise that conflating them results in complexity.</p><h2 id="how&#95;datomic&#95;does&#95;it">How Datomic does it</h2><h3 id="datomic's&#95;model">Datomic's model</h3><p><i>(See also the <a href='https://docs.datomic.com/cloud/whatis/data-model.html'>official documentation</a>).</i></p><p>Datomic models information as a collection of facts. Each fact is represented by a <strong>Datom:</strong> a Datom is a 5-tuple <code>&#91;entity-id attribute value transaction-id added?&#93;</code>, in which:</p><ul><li><code>entity-id</code> is an integer identifying the entity (e.g a User or a Question) described by the fact (akin to a row number in a relational database)</li><li><code>attribute</code> could be something like <code>:user&#95;first&#95;name</code> or <code>:question&#95;author</code> (akin to a column in a relational database)</li><li><code>value</code> is the 'content' of the attribute for this entity (e.g <code>&quot;John&quot;</code>)</li><li><code>transaction-id</code> identifies the <i>transaction</i> at which the datom was added (a transaction is itself an entity)</li><li><code>added?</code> is a boolean, determining if the datom is <i>added</i> (we now know this fact) or <i>retracted</i> (we no longer know this fact)</li></ul><p>For instance, the Datom <code>#datom &#91;42 :question&#95;title &quot;What is Event Sourcing&quot; 213130 true&#93;</code> could be translated in English: "We learned from Transaction 213130 that Entity 42, which is a Question, has title 'What is Event Sourcing"'.</p><p>A Datomic <strong>Database Value</strong> represents the state of the system at a point in time, or more accurately the <i>knowledge</i> accumulated by the system up to a point in time. From a logical standpoint, a Database value is just a collection of Datoms. For instance, here's an extract of our Q&A database:</p><pre><code class="clojure">&#40;def db-value-extract
+  &#91;;; ...
+   #datom &#91;38 :user&#95;id &quot;jane-hacker3444&quot; 896647 true&#93;
+   ;; ...
+   #datom &#91;234 :question&#95;id &quot;what-is-event-sourcing-3242599&quot; 896770 true&#93;
+   #datom &#91;234 :question&#95;author 38 896770 true&#93;
+   #datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896770 true&#93;
+   #datom &#91;234 :question&#95;body &quot;I've heard a lot about Event Sourcing but not sure what it's for exactly, could someone explain?&quot; 896770 true&#93;
+   ;;
+   #datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896773 false&#93;
+   #datom &#91;234 :question&#95;title &quot;What is Event Sourcing?&quot; 896773 true&#93;
+   ;; ...
+   #datom &#91;456 :answer&#95;id #uuid&quot;af1722d5-c9bb-4ac2-928e-cf31e77bb7fa&quot; 896789 true&#93;
+   #datom &#91;456 :answer&#95;question 234 896789 true&#93;
+   #datom &#91;456 :answer&#95;author 43 896789 true&#93;
+   #datom &#91;456 :answer&#95;body &quot;Event Sourcing is about &#91;...&#93;&quot; 896789 true&#93;
+   ;; ...
+   #datom &#91;774 :vote&#95;question 234 896823 true&#93;
+   #datom &#91;774 :vote&#95;direction :vote&#95;up 896823 true&#93;
+   #datom &#91;774 :vote&#95;author 41 896823 true&#93;
+   ;; ...
+   &#93;&#41;
+</code></pre><p>In practice, a Datomic Database Value is not implemented as a basic list; it's a sophisticated data structures comprising multiple indexes, which allows for expressive and fast queries using <a href='http://www.learndatalogtoday.org/'>Datalog</a>, a query language for relational data. But <i>logically</i>, a Database value is just a list of datoms. Surprisingly, this very simple model allows for representing and querying data no less effectively than conventional databases (SQL / document stores / graph databases /etc.).</p><p>A Datomic deployment is a succession of (growing) Database Values. Writing to Datomic consists of submitting a <strong>Transaction Request</strong> (a data structure representing the change that we want applied); this Transaction Request gets applied to the current Database value, which consists of computing a set of Datoms to add to it (a <strong>Transaction</strong>), thus yielding the next Database Value.</p><p>For instance, a Transaction Request for changing the title of a Question could look like this:</p><pre><code class="clojure">&#40;def tx-request-changing-question-title
+  &#91;&#91;:db/add &#91;:question&#95;id &quot;what-is-event-sourcing-3242599&quot;&#93; :question&#95;title &quot;What is Event Sourcing?&quot;&#93;&#93;&#41;
+</code></pre><p>This would result in a Transaction, where we recognize some Datoms of <code>db-value-extract</code> above:</p><pre><code class="clojure">&#40;comment &quot;Writing to Datomic&quot;
+  @&#40;d/transact conn tx-request-changing-question-title&#41;
+  =&gt; {:db-before datomic.Db @3414ae14                       ;; the Database Value to which the Transaction Request was applied
+      :db-after datomic.Db @329932cd                        ;; the resulting next Database Value
+      :tx-data                                              ;; the Datoms that were added by the Transaction
+      &#91;#datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896773 false&#93;
+       #datom &#91;234 :question&#95;title &quot;What is Event Sourcing?&quot; 896773 true&#93;
+       #datom &#91;896773 :db/txInstant #inst &quot;2018-11-07T15:32:54&quot; 896773 true&#93;&#93;}
+  &#41;
+</code></pre><p>Now we start to see the deep similarities between Datomic and the Event Sourcing notions we've laid out so far:</p><ul><li>Transaction Requests correspond to Commands</li><li>Transactions correspond to Events</li><li>a Datomic database corresponds to an Event Log</li></ul><p>We also see some important differences:</p><ul><li>Events consist of a combination of fine-grained Datoms; there is no Event Type with a prescribed structure.</li><li>Events are directly not produced by application code; Transaction Requests (Commands) are.</li></ul><h3 id="processing&#95;events&#95;with&#95;datomic">Processing Events with Datomic</h3><p>We'll now study how we can implement an Event Sourcing system with Datomic.</p><p>First, let's note that <strong>a Datomic Database Value can be viewed as an Aggregate; one that is maintained synchronously with no extra effort, contains all of the data stored in Events, and can be queried expressively.</strong> This Aggregate will probably cover most of your querying needs; from what I've seen, the most likely use cases for adding downstream Aggregates are search, low-latency aggregations, and data exports.</p><p>It's also worth noting that you can obtain any past value of a Datomic Database, and so you can reproduce a past state out-of-the-box - no need to re-process the entire Log:</p><pre><code class="clojure">&#40;def db-at-last-xmas 
+  &#40;d/as-of db #inst &quot;2017-12-25&quot;&#41;&#41;
+</code></pre><p>You can use the <a href='https://docs.datomic.com/on-prem/log.html'>Log API</a> to get the Transactions between 2 points in time:</p><pre><code class="clojure">&#40;comment &quot;Reading the changes between t1 and t2 as a sequence of Transactions:&quot;
+  &#40;d/tx-range &#40;d/log conn&#41; t0 t1&#41;
+  =&gt; &#91;{:tx-data &#91;#datom &#91;234 :question&#95;id &quot;what-is-event-sourcing-3242599&quot; 896770 true&#93;
+                 #datom &#91;234 :question&#95;author 38 896770 true&#93;
+                 #datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896770 true&#93;
+                 #datom &#91;234 :question&#95;body &quot;I've heard a lot about Event Sourcing but not sure what it's for exactly, could someone explain?&quot; 896770 true&#93;
+                 #datom &#91;896770 :db/txInstant #inst &quot;2018-11-07T15:32:09&quot;&#93;&#93;}
+      ;; ...
+      {:tx-data &#91;#datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896773 false&#93;
+                 #datom &#91;234 :question&#95;title &quot;What is Event Sourcing?&quot; 896773 true&#93;
+                 #datom &#91;896773 :db/txInstant #inst &quot;2018-11-07T15:32:54&quot;&#93;&#93;}
+      ;; ...
+      {:tx-data &#91;#datom &#91;456 :answer&#95;id #uuid&quot;af1722d5-c9bb-4ac2-928e-cf31e77bb7fa&quot; 896789 true&#93;
+                 #datom &#91;456 :answer&#95;question 234 896789 true&#93;
+                 #datom &#91;456 :answer&#95;author 43 896789 true&#93;
+                 #datom &#91;456 :answer&#95;body &quot;Event Sourcing is about &#91;...&#93;&quot; 896789 true&#93;
+                 #datom &#91;896789 :db/txInstant #inst&quot;2018-11-08T14:16:33.825-00:00&quot;&#93;&#93;}
+      ;; ...
+      {:tx-data &#91;#datom &#91;774 :vote&#95;question 234 896823 true&#93;
+                 #datom &#91;774 :vote&#95;direction :vote&#95;up 896823 true&#93;
+                 #datom &#91;774 :vote&#95;author 41 896823 true&#93;
+                 #datom &#91;896823 :db/txInstant #inst&quot;2018-11-08T14:19:31.855-00:00&quot;&#93;&#93;}&#93;
+  &#41;
+</code></pre><p>Notice that, although they describe change in a very minimal form, <strong>Transactions can be combined with Database Values to compute the effect of a change in a straightforward way.</strong>  You don't need to 'enrich' your Events to make them easier to process; they are <i>already</i> enriched with entire Database Values.</p><p><div style="text-align:center;"><img src="/img/chess-both-incremental-and-absolute.png" width="100%"> <small><i>The best of both worlds: you get both absolute and incremental views of the state at each transition.</i></small></div></p><p>For instance, here's a query that determines which Users must have their reputation re-computed because of Votes:</p><pre><code class="clojure">&#40;comment &quot;Computes a set of Users whose reputation may have been affected by Votes&quot;
+  &#40;d/q '&#91;:find &#91;?user-id ...&#93;
+         :in $ ?log ?t1 ?t2                                 ;; query inputs
+         :where
+         &#91;&#40;tx-ids ?log ?t1 ?t2&#41; &#91;?tx ...&#93;&#93;                  ;; reading the Transactions
+         &#91;&#40;tx-data ?log ?tx&#41; &#91;&#91;?vote ?a ?v &#95; ?op&#93;&#93;&#93;         ;; reading the Datoms
+         &#91;?vote :vote&#95;question ?q&#93;                          ;; navigating from Votes to Questions
+         &#91;?q :question&#95;author ?user&#93;                        ;; navigating from Questions to Users
+         &#91;?user :user&#95;id ?user-id&#93;&#93;
+    db &#40;d/log conn&#41; t1 t2&#41;
+  =&gt; &#91;&quot;jane-hacker3444&quot;
+      &quot;john-doe12232&quot;
+      ;; ...
+      &#93;
+  ;; Now it will be easy to update our 'UserReputation' Aggregate
+  ;; by re-computing the reputation of this &#40;probably small&#41; set of Users.
+  &#41;
+</code></pre><p>When it comes to change detection, the basic approach described in the above example gets you surprisingly far. However, sometimes, you don't just want to know what changed: you want to know <i>why</i> or <i>how</i> it changed. For instance:</p><ul><li>you may want to keep track of what User caused the change</li><li>you may want to know from what UI action the change originated</li></ul><p>The recommended way to do that with Datomic is using <a href='https://docs.datomic.com/cloud/transactions/transaction-processing.html#reified-transactions'>Reified Transactions</a>: Datomic Transactions being Entities themselves, you can add facts about them. For example:</p><pre><code class="clojure">&#40;comment &quot;Annotating the Transaction&quot;
+  @&#40;d/transact conn
+     &#91;;; Fact about the Question
+      &#91;:db/add &#91;:question&#95;id &quot;what-is-event-sourcing-3242599&quot;&#93; :question&#95;title &quot;What is Event Sourcing?&quot;&#93;
+      ;; Facts about the Transaction
+      &#91;:db/add &quot;datomic.tx&quot; :transaction&#95;done&#95;by&#95;user &#91;:user&#95;id &quot;jane-hacker3444&quot;&#93;&#93;
+      &#91;:db/add &quot;datomic.tx&quot; :transaction&#95;done&#95;via&#95;ui&#95;action :UserEditedQuestion&#93;&#93;&#41;
+  =&gt; {:db-before datomic.Db@3414ae14
+      :db-after datomic.Db@329932cd
+      :tx-data
+      &#91;#datom &#91;234 :question&#95;title &quot;What is Event Sourcing&quot; 896773 false&#93;
+       #datom &#91;234 :question&#95;title &quot;What is Event Sourcing?&quot; 896773 true&#93;
+       #datom &#91;896773 :db/txInstant #inst &quot;2018-11-07T15:32:54&quot; 896773 true&#93;
+       #datom &#91;896773 :transaction&#95;done&#95;by&#95;user 38 896773 true&#93;
+       #datom &#91;896773 :transaction&#95;done&#95;via&#95;ui&#95;action :UserEditedQuestion 896773 true&#93;&#93;}
+  &#41;
+</code></pre><h3 id="cost-benefit&#95;analysis">Cost-benefit analysis</h3><p>Whether or not the usage of Datomic we described is 'true Event Sourcing' depends on your definition of Event Sourcing; but what's more important in my opinion is whether or not we get the benefits, and at what cost.</p><p>So let's revisit the objectives and common difficulties of Event Sourcing that we described above. </p><blockquote><p> <strong>Do we get the benefits of Event Sourcing?</strong> </p></blockquote><p>Yes:</p><ul><li>All state transitions are described in a Log of Events (accessible by Datomic's Log API)</li><li>We have a high query power (Datalog) to consume that Log of Events and derive Aggregates from it</li><li>We get a rich default Aggregate (Datomic database values) for free, with which we can reproduce past states out-of-the-box (<code>db.asOf&#40;t&#41;</code>).</li></ul><blockquote><p> <strong>Do we still have the difficulties of conventional Event Sourcing?</strong> </p></blockquote><p>Well, let's see:</p><ul><li><strong>'Designing Event Types and Event Handlers is hard':</strong> we don't design Event Types any more; we design only our database schema (which tends to map naturally to our domain model), and Datomic will do the work of describing changes in terms of Datoms, which can be handled generically. For the few cases where that description is not enough, we can extend it using Reified Transactions. Regarding Event Handlers, a lot of them are no longer needed because we have a good enough default Aggregate (Database Values).</li><li><strong>'Detecting indirect changes is hard':</strong> it's now straightforward to compute the effects of each change on downstream Aggregates, since we have both incremental and global views of each state transition (Transactions and Database Values) with high query power.</li><li><strong>'Transactionality is hard to achieve':</strong> no issues there, Datomic is fully ACID with an expressive language for writes.</li><li><strong>'Conflating Commands and Events':</strong> there's not really room for confusion here - Datomic does not let us even emit Events, we can only write with Commands.</li></ul><p>Of course, <strong>Datomic has limitations,</strong> and to get those benefits you have to make sure these limitations are not prohibitive for your use case:</p><ul><li><strong>Write scale:</strong> Don't expect to make tens of thousands of writes per seconds on one Datomic system. (Read scale is okay. Datomic scales horizontally for reads, and hopefully this article has made it clear that it's easy to offload reads to specialized stores.)</li><li><strong>Dataset size:</strong> If you need to store petabytes of data, you will need to either complement or replace Datomic with something else.</li><li><strong>Data model:</strong> You data must lend itself well to being represented in Datomic. Datomic's <a href='https://docs.datomic.com/cloud/whatis/data-model.html#universal'>Universal Schema</a>, inspired by <a href='https://www.w3.org/RDF/'>RDF</a>, is good at modeling what you would store in table, document or graph-oriented databases, but with some imagination you could probably come up with something that's hard to represent in Datomic. (By the way, contrary to popular belief, Datomic is not <a href='https://vvvvalvalval.github.io/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html'>especially good</a> at representing historical data.)</li><li><strong>Infrastructure:</strong> Datomic is good for running on big server machines, typically in the Cloud - not on mobile devices or embedded systems.</li><li><strong>Proprietary:</strong> Datomic is not open-source, for some people that's a dealbreaker.</li></ul><h2 id="conclusion">Conclusion</h2><p>In addition to the Log of changes, Datomic provides a queriable snapshot (a ‘state’) of the entire database yielded by each change, all of this being directed by transactional writes. <strong>This is a significant technological feat, which explains why we can reap the benefits of Event Sourcing with much less effort and limitations than with conventional Event Sourcing implementations.</strong></p><p>In more traditional CQRS parlance: Datomic gives you all in synchrony an expressive Command language (Datomic transaction requests), actionable Events (transactions as sets of added Datoms) and a powerful, relational default Aggregate (Datomic database values).</p><p>Hopefully this shows that <strong>Event Sourcing does not have to be as demanding as we've got accustomed to,</strong> so long as we're willing to rethink a bit our assumptions of how it should be implemented.</p><p>Finally, I should mention that this article offers a very <i>narrow</i> view of Datomic. There is <a href='https://augustl.com/blog/2018/datomic_look_at_all_the_things_i_am_not_doing/'>more</a> to Datomic than just being good at Event Sourcing! (The development workflow, the testing story, the composable writes, the flexible schema, the operational aspects...)</p><p>I've been overly politically correct in this entire article, and that must be pretty boring,  so I'll leave you with this snarky provocative phrase:</p><blockquote><p> <i>Any sufficiently advanced conventional Event Sourcing system contains an ad-hoc, informally-specified, bug-ridden, slow implementation of half Datomic.</i> </p></blockquote><h2 id="see&#95;also">See also</h2><ul><li><a href='https://martinfowler.com/eaaDev/EventSourcing.html'>Event Sourcing</a>: by Martin Fowler.</li><li><a href='https://eventstore.org/docs/event-sourcing-basics/index.html'>Event Sourcing basics</a> from the documentation of EventStore.</li><li><a href='https://kickstarter.engineering/event-sourcing-made-simple-4a2625113224'>Event Sourcing made simple</a>: an explanation and experience report of Event Sourcing by Kickstarter engineering.</li><li><a href='https://www.youtube.com/watch?v=Cym4TZwTCNU'>Deconstructing the database</a> by Rich Hickey, creator of Datomic.</li><li><a href='https://martin.kleppmann.com/2018/10/17/kafka-summit.html'>Is Kafka a database?</a> a talk by Martin Kleppmann.</li><li><a href='https://fr.slideshare.net/ThomasPierrain/as-time-goes-by-episode-2'>As time goes by, episode 2: technical challenges of bi-temporal Event Sourcing</a></li></ul>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/Architecture.html">Architecture</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+    <a href="/Datomic.html">Datomic</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a Lingua Franca for domain modeling &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html">Datomic: Event Sourcing without the hassle</a></li>
+                        
+                        <li><a href="/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a Lingua Franca for domain modeling</a></li>
+                        
+                        <li><a href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant</a></li>
+                        
+                        <li><a href="/posts/2018-01-06-so-yeah-about-clojures-syntax.html">So yeah, about Clojure&#39;s syntax...</a></li>
+                        
+                        <li><a href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Using PostgreSQL temporary views for expressing business logic</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>
