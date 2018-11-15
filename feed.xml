@@ -12,7 +12,7 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Mon, 12 Nov 2018 09:14:06 +0100
+Thu, 15 Nov 2018 09:01:16 +0100
 </lastBuildDate>
 <generator>
 clj-rss
@@ -70,8 +70,8 @@ Datomic: Event Sourcing without the hassle
     &amp;quot;answer&amp;#95;id&amp;quot;: &amp;quot;af1722d5-c9bb-4ac2-928e-cf31e77bb7fa&amp;quot;,
     &amp;quot;answer&amp;#95;body&amp;quot;: &amp;quot;Event Sourcing is about &amp;#91;...&amp;#93;&amp;quot;,
     &amp;quot;answer&amp;#95;author&amp;quot;: {
-      &amp;quot;user&amp;#95;id&amp;quot;: &amp;quot;bob980877&amp;quot;,
-      &amp;quot;user&amp;#95;name&amp;quot;: &amp;quot;Bobby&amp;quot;,
+      &amp;quot;user&amp;#95;id&amp;quot;: &amp;quot;alice-doe32099&amp;quot;,
+      &amp;quot;user&amp;#95;name&amp;quot;: &amp;quot;Alice Doe&amp;quot;,
       &amp;quot;user&amp;#95;reputation&amp;quot;: 12665
     }
   }&amp;#93;
