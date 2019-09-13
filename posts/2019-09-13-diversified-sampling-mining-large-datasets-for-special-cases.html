@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: &#39;Diversified Sampling&#39;: mining large datasets for special cases</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">September 13, 2019</div>
+        
+    </div>
+    <h2>&#39;Diversified Sampling&#39;: mining large datasets for special cases</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#the_problem">The problem</a></li><li><a href="#why_we_need_small_samples">Why we need small samples</a></li><li><a href="#naive_approach:_uniform_sampling">Naive approach: uniform sampling</a></li><li><a href="#the_algorithm:_selecting_rare_features">The algorithm: selecting rare features</a></li><li><a href="#pitfalls">Pitfalls</a></li><ol><li><a href="#beware_of_features_explosion">Beware of features explosion</a></li><li><a href="#design_your_features_function_well">Design your features function well</a></li><li><a href="#do_not_use_diversified_sampling_for_statistics">Do not use Diversified Sampling for statistics</a></li></ol></ol>
+     <p>In this article, I want to share a little <i>data engineering</i> trick that I've used for building programs that consume poorly-understood data, which I'm calling 'Diversified Sampling'. This terminology is totally made up by me, and there's a high chance that this technique already exists with another name, or that the scholars have deemed it too trivial to name it at all. Hopefully some people more knowledgeable than me will comment on this.</p><p><strong>TL;DR:</strong> the objective is to build a small sample of the data in which special cases are likely to be represented. The strategy is to have each data item emit a list of 'features', and to boost the probability of selecting rare features. A shallow understanding of the data is often enough to design an effective features extraction. <br />  </p><h2 id="the&#95;problem">The problem</h2><p>Suppose that you're given a large datasets of documents, and you have to build a system that extracts information from these documents. You only have a poor technical understanding of these documents: basically, some told you informally what the documents are about, and if you're lucky you have a vague spec or schema which will be mostly respected by the documents. What's more, the dataset is big enough that it would take hours for a machine to process it fully, and many lifetimes for you to read all the documents with your own eyes. Yet you have to write a program that processes these documents reliably. What do you do?</p><p>As an case study for this article, we're going to use the Articles data dump <a href='https://doaj.org/public-data-dump'>of the Directory of Open Access Journals</a> (DOAJ), which contains metadata about around 4 million academic articles in the form of JSON documents. To make things concrete, here's one document from this dataset:</p><pre><code class="json">{
+  &quot;last&#95;updated&quot; : &quot;2019-02-21T17:05:46Z&quot;,
+  &quot;id&quot; : &quot;cfc9b25374b6400da55a35d2815cc915&quot;,
+  &quot;bibjson&quot; : {
+    &quot;abstract&quot; : &quot;The author estimates both medical insurance agencies’ performance in the field of providing and protecting the rights of insured persons within compulsory medical insurance and the role of insurance medical agencies in the system of social protection of citizens&quot;,
+    &quot;month&quot; : &quot;4&quot;,
+    &quot;journal&quot; : {
+      &quot;publisher&quot; : &quot;Omsk Law Academy&quot;,
+      &quot;license&quot; : &#91; {
+        &quot;url&quot; : &quot;http://en.vestnik.omua.ru/content/open-access-policy&quot;,
+        &quot;open&#95;access&quot; : true,
+        &quot;type&quot; : &quot;CC BY&quot;,
+        &quot;title&quot; : &quot;CC BY&quot;
+      } &#93;,
+      &quot;language&quot; : &#91; &quot;RU&quot; &#93;,
+      &quot;title&quot; : &quot;Vestnik Omskoj Ûridičeskoj Akademii&quot;,
+      &quot;country&quot; : &quot;RU&quot;,
+      &quot;number&quot; : &quot;27&quot;,
+      &quot;issns&quot; : &#91; &quot;2306-1340&quot;, &quot;2410-8812&quot; &#93;
+    },
+    &quot;keywords&quot; : &#91; &quot;Compulsory medical insurance&quot;, &quot;insurance medical agencies&quot;, &quot;free medical aid&quot;, &quot;social protection of citizens&quot; &#93;,
+    &quot;title&quot; : &quot;The Role of Medical Insurance Agencies in the System of Social Protection of Citizens&quot;,
+    &quot;author&quot; : &#91; {
+      &quot;affiliation&quot; : &quot;Omsk Law Academy&quot;,
+      &quot;name&quot; : &quot;Beketova A. V. &quot;
+    } &#93;,
+    &quot;year&quot; : &quot;2015&quot;,
+    &quot;link&quot; : &#91; {
+      &quot;url&quot; : &quot;http://vestnik.omua.ru/?q=content/rol-strahovyh-medicinskih-organizaciy-v-sisteme-socialnoy-zashchity-naseleniya&quot;,
+      &quot;type&quot; : &quot;fulltext&quot;
+    } &#93;,
+    &quot;start&#95;page&quot; : &quot;52&quot;,
+    &quot;identifier&quot; : &#91; {
+      &quot;type&quot; : &quot;pissn&quot;,
+      &quot;id&quot; : &quot;2306-1340&quot;
+    }, {
+      &quot;type&quot; : &quot;eissn&quot;,
+      &quot;id&quot; : &quot;2410-8812&quot;
+    } &#93;,
+    &quot;end&#95;page&quot; : &quot;55&quot;,
+    &quot;subject&quot; : &#91; {
+      &quot;scheme&quot; : &quot;LCC&quot;,
+      &quot;term&quot; : &quot;Law&quot;,
+      &quot;code&quot; : &quot;K&quot;
+    } &#93;
+  },
+  &quot;created&#95;date&quot; : &quot;2018-02-19T06:45:24Z&quot;
+}
+</code></pre><h2 id="why&#95;we&#95;need&#95;small&#95;samples">Why we need small samples</h2><p>Because the dataset is so big, the need quickly arises to work on small samples of the documents, for several uses:</p><ol><li>For <strong>'having a look'</strong> at the data, e.g getting familiar with the schema of the documents to understand what attributes are available and what they mean.</li><li>For <strong>example-based testing</strong>: you'll likely want to test whatever code you write for extracting information from the data, so a sample can give you a set of realistic examples on which you can test your processing code quickly.</li><li>Even if you prefer <strong>generative testing</strong>, you're going to have to develop a model of the data, and to iterate on that model you'll want to validate it rapidly against real-world examples.</li><li>On a related topic, for <strong>data validation</strong>: your program will make assumptions about the properties of the data, and you'll want to check that new documents fall within these assumptions. A small sample can help you iterate on these assumptions rapidly, after which you can gain even more confidence by testing these assumptions against the entire dataset.</li></ol><h2 id="naive&#95;approach:&#95;uniform&#95;sampling">Naive approach: uniform sampling</h2><p>The most intuitive approach to sampling is simply to select each document randomly with uniform probability; for example, to build a sample of about 1000 documents out of the 4.2 million documents of the DOAJ dataset, I could run them through an algorithm that keeps each document with probability 1000 / 4200000. </p><p>Unfortunately, this is likely to be insufficient, because it will fail to capture some rare pathological cases that need to be handled nonetheless. Here are a few examples of 'pathological cases':</p><ol><li>a few documents may be lacking an <code>id</code> attribute.</li><li>a few documents may have their <code>start&#95;page</code> attribute written in roman numerals (true story!)</li><li>a few documents may have more than a thousand <code>keywords</code>, and your processing code will choke on that.</li></ol><p>When you build on uniform samples, it's common to write code that seems to work perfectly fine, and then fails a few hours into processing because of one pathological input. As your information-extracting code evolves, it's important to be able to detect these edge cases rapidly.</p><p>For testing purposes, it's better to have samples in which the special cases are over-represented. We don't want to select all documents with equal probability: we want the <i>freaks</i>! But how do you select for pathological cases, since your problem is precisely that you have an incomplete understanding of how the data might behave?</p><h2 id="the&#95;algorithm:&#95;selecting&#95;rare&#95;features">The algorithm: selecting rare features</h2><p>The idea behind the approach I'm proposing here is that you can usually detect special cases even without a good understanding of the data semantics, based on some 'mechanical' aspects of the data, such as the set of attributes present in a document, or the presence of rare characters.  </p><p>More precisely, the idea is that you would implement a function that extracts from any given document a set of 'features' (a list of Strings); the guiding principle for designing the features function is that pathological cases should exhibit rare features. For example, the features extracted from the above example might be:</p><pre><code>bibjson
+bibjson.abstract
+bibjson.author
+bibjson.author.&#91;&#93;.affiliation
+bibjson.author.&#91;&#93;.name
+bibjson.end&#95;page
+bibjson.identifier
+bibjson.identifier.&#91;&#93;.id
+bibjson.identifier.&#91;&#93;.type
+bibjson.journal
+bibjson.journal.country
+bibjson.journal.issns
+bibjson.journal.issns.0
+bibjson.journal.issns.1
+bibjson.journal.language
+bibjson.journal.license
+bibjson.journal.license.&#91;&#93;.open&#95;access
+bibjson.journal.license.&#91;&#93;.title
+bibjson.journal.license.&#91;&#93;.type
+bibjson.journal.license.&#91;&#93;.url
+bibjson.journal.number
+bibjson.journal.publisher
+bibjson.journal.title
+bibjson.keywords
+bibjson.link
+bibjson.link.&#91;&#93;.type
+bibjson.link.&#91;&#93;.url
+bibjson.month
+bibjson.start&#95;page
+bibjson.subject
+bibjson.subject.&#91;&#93;.code
+bibjson.subject.&#91;&#93;.scheme
+bibjson.subject.&#91;&#93;.term
+bibjson.title
+bibjson.year
+created&#95;date
+doaj.article.link-type/fulltext
+doaj.article.n-keywords/highest1bit=4
+doaj.article.n-languages/highest1bit=1
+doaj.article.n-licenses/highest1bit=1
+doaj.article.n-subjects/highest1bit=1
+doaj.article.subject-scheme/LCC
+doaj.identifier-type/eissn
+doaj.identifier-type/pissn
+id
+last&#95;updated
+</code></pre><p>Notice how most of these 'features' can be derived very mechanically from the data:</p><ul><li><strong>present attributes / paths:</strong> for example, <code>bibjson.author.&#91;&#93;.name</code> tells you that the document is a map with a <code>bibjson</code> key, containing a map with an <code>author</code> key, containing an array of maps with a <code>name</code> key. Such a feature can be extracted from any JSON document without any more knowledge of what it contains.</li><li><strong>cardinality:</strong> for example, <code>doaj.article.n-keywords/highest1bit=4</code> tells you that the article has between 4 and 7 <code>keywords</code>.</li><li><strong>enumerations:</strong> for example, <code>doaj.article.subject-scheme/LCC</code> tells you that the article has a subject of scheme <code>LCC</code>, whatever that means. You don't need to know what a subject or a scheme is to make this extraction: you only need to 'smell' that we're dealing with an enumerated attribute.</li><li>other good candidates include character ranges (for detecting diacritics / XML markup / encoding errors), rounded String lengths, URL or date patterns, JSON value types, etc.</li></ul><p>Once you can extract appropriate features, the algorithm is simple to describe: <strong>each document is selected with a probability proportional to the rarity (inverse frequency) of its rarest feature.</strong> More precisely:</p><ol><li>You parameterize your algorithm with a small number <code>K</code> (e.g 10), meaning that every feature should on average be represented at least <code>K</code> times.</li><li>For each article, you draw a random number <code>r</code> between 0 and 1. If the document has a feature such that <code>r &lt; K/M</code>, where <code>M</code> is the number of times that the feature appears in the entire dataset, then it is selected. In particular, if a feature is rare to the point of being represented fewer than <code>K</code> times, then the documents having it are guaranteed to be selected.</li></ol><p>Some notes:</p><ol><li>A generally useful refinement from the above is to consider the <i>absence</i>  of a feature as a feature itself (for instance, this is how you would select the rare occurrence of an <code>id</code> field missing). With the above notation, this implies comparing <code>r</code> to either <code>K/M</code> or <code>K/&#40;N-M&#41;</code> depending on whether the feature is present or not in the document, where <code>N</code> denotes the total number of articles.</li><li>The algorithm does 2 linear passes on the entire data, and is well suited to be run in a parallel and distributed architecture like MapReduce / Spark / etc. while accumulating very small result. Provided that your features function is not too expensive, this can run very fast.</li><li>You choose <code>K</code> based on the desired sample size. In practice, it can be hard to predict what the resulting sample size will be, because it depends on the number of features but also on how they correlate.</li></ol><p>In light of this, let's have a look at the distribution of features in our dataset:</p><pre><code>|                                 Feature | #articles |
+|-----------------------------------------+-----------|
+|                                   admin |   1262315 |
+|                              admin.seal |   1262315 |
+|                                 bibjson |   3925522 |
+|                        bibjson.abstract |   3528943 |
+|                          bibjson.author |   3892589 |
+|           bibjson.author.&#91;&#93;.affiliation |   2075706 |
+|                  bibjson.author.&#91;&#93;.name |   3885804 |
+|                        bibjson.end&#95;page |   2551540 |
+|                      bibjson.identifier |   3925522 |
+|                bibjson.identifier.&#91;&#93;.id |   3925522 |
+|              bibjson.identifier.&#91;&#93;.type |   3925522 |
+|                         bibjson.journal |   3925522 |
+|                 bibjson.journal.country |   3925522 |
+|                   bibjson.journal.issns |   3925522 |
+|                 bibjson.journal.issns.0 |   3925522 |
+|                 bibjson.journal.issns.1 |   2105552 |
+|                bibjson.journal.language |   3925522 |
+|                 bibjson.journal.license |   3925522 |
+|  bibjson.journal.license.&#91;&#93;.open&#95;access |   3909861 |
+|        bibjson.journal.license.&#91;&#93;.title |   3922195 |
+|         bibjson.journal.license.&#91;&#93;.type |   3922195 |
+|          bibjson.journal.license.&#91;&#93;.url |   3918950 |
+|                  bibjson.journal.number |   3389896 |
+|               bibjson.journal.publisher |   3925522 |
+|                   bibjson.journal.title |   3925522 |
+|                  bibjson.journal.volume |   3800165 |
+|                        bibjson.keywords |   2340697 |
+|                            bibjson.link |   3925522 |
+|            bibjson.link.&#91;&#93;.content&#95;type |   2068285 |
+|                    bibjson.link.&#91;&#93;.type |   3912438 |
+|                     bibjson.link.&#91;&#93;.url |   3912438 |
+|                           bibjson.month |   3237064 |
+|                      bibjson.start&#95;page |   3167003 |
+|                         bibjson.subject |   3925522 |
+|                 bibjson.subject.&#91;&#93;.code |   3918612 |
+|               bibjson.subject.&#91;&#93;.scheme |   3918612 |
+|                 bibjson.subject.&#91;&#93;.term |   3918612 |
+|                           bibjson.title |   3922426 |
+|                            bibjson.year |   3855525 |
+|                            created&#95;date |   3925522 |
+|         doaj.article.link-type/fulltext |   3912438 |
+|   doaj.article.n-keywords/highest1bit=0 |   1584825 |
+|   doaj.article.n-keywords/highest1bit=1 |    200419 |
+| doaj.article.n-keywords/highest1bit=128 |        47 |
+|  doaj.article.n-keywords/highest1bit=16 |      8776 |
+|   doaj.article.n-keywords/highest1bit=2 |    446826 |
+| doaj.article.n-keywords/highest1bit=256 |         2 |
+|  doaj.article.n-keywords/highest1bit=32 |       606 |
+|   doaj.article.n-keywords/highest1bit=4 |   1466157 |
+|  doaj.article.n-keywords/highest1bit=64 |       218 |
+|   doaj.article.n-keywords/highest1bit=8 |    217646 |
+|  doaj.article.n-languages/highest1bit=0 |         1 |
+|  doaj.article.n-languages/highest1bit=1 |   2726455 |
+|  doaj.article.n-languages/highest1bit=2 |   1058128 |
+|  doaj.article.n-languages/highest1bit=4 |    137890 |
+|  doaj.article.n-languages/highest1bit=8 |      3048 |
+|   doaj.article.n-licenses/highest1bit=0 |      3327 |
+|   doaj.article.n-licenses/highest1bit=1 |   3922195 |
+|   doaj.article.n-subjects/highest1bit=0 |      6910 |
+|   doaj.article.n-subjects/highest1bit=1 |   2405221 |
+|   doaj.article.n-subjects/highest1bit=2 |   1459074 |
+|   doaj.article.n-subjects/highest1bit=4 |     53447 |
+|   doaj.article.n-subjects/highest1bit=8 |       870 |
+|        doaj.article.subject-scheme/DOAJ |      4633 |
+|         doaj.article.subject-scheme/LCC |   3918612 |
+|                doaj.identifier-type/DOI |     47595 |
+|                doaj.identifier-type/doi |   2724699 |
+|              doaj.identifier-type/eissn |   2974967 |
+|               doaj.identifier-type/issn |      1626 |
+|              doaj.identifier-type/pissn |   2831153 |
+|          doaj.identifier-type/publisher |      1150 |
+|                                      id |   3925522 |
+|                            last&#95;updated |   3925522 |
+</code></pre><p>Looking at this, we see that there are some irregularities which we could have easily missed with naive sampling:</p><ol><li>One article has zero languages - this could easily have caused an error in our processing.</li><li>4633 (out of 4 million!) articles have a DOAJ-specific subject scheme, instead of the almost ubiquitous LCC.</li><li>1626 articles have an ISSN number which is classified neither as electronic (<code>eissn</code>) nor print (<code>pissn</code>)</li><li>We see an inconsistency in how DOI identifiers are declared - most of the time as <code>&quot;doi&quot;</code>, and more rarely (47595) as <code>&quot;DOI&quot;</code>.</li><li>49 articles have more than 128 keywords. This could cause performance issues, should we do some processing that emits tuples of these keywords.</li></ol><p>This isn't to bash on DOAJ - in my experience, compared to other academic publishers, their data exports are really a pleasure to work with. But it is a good reminder that real-world data tends to be full of surprises.</p><p>How much does Diversified Sampling increase our odds of selecting these special cases? Let's examine the example of the 4633 articles having a DOAJ-specific subject scheme:</p><ul><li><strong>Naive sampling:</strong> if you use the naive sampling method, aiming for a sample size of 1000 articles, you have a <strong>30.5%</strong> chance of missing out on all 4633 articles.</li><li><strong>Diversified sampling:</strong> using diversified sampling with <code>K=20</code> (which in this case yields a sample of about 500 articles), the odds of missing out on all 4633 are <i>at most</i> <strong>0.0000002%</strong>. There's a mathematical approximation that sheds some light on this: even when <code>K &lt;&lt; M</code>, then <code>&#40;1- K/M&#41;&#94;M ≈ exp&#40;-K&#41; ≈ &#40;0.37&#41;&#94;K</code>.</li></ul><h2 id="pitfalls">Pitfalls</h2><h3 id="beware&#95;of&#95;features&#95;explosion">Beware of features explosion</h3><p>If your features function generates too many features, then your sample size will tend to explode, and the pathological cases you were mining for will be diluted in falsely special documents. For example, in our DOAJ example, the exact number of keywords or the length of the abstract would be bad features, because these will tend to take very dispersed values that will be interpreted as rare features; when dealing with cardinalities like this, it's better to use logarithmic buckets instead of exact values.</p><h3 id="design&#95;your&#95;features&#95;function&#95;well">Design your features function well</h3><p>More generally, the entire principle of this sampling algorithm relies on emitting features that correspond well to special cases. There's no one-size-fits-all solution for this: you will have to look at the data and make ad hoc guesses.</p><h3 id="do&#95;not&#95;use&#95;diversified&#95;sampling&#95;for&#95;statistics">Do not use Diversified Sampling for statistics</h3><p>Do not use the diversified sample to compute aggregates like the average number of keywords. By design, Diversified Sampling selects mostly outliers which are not representative of the trends in your data. Naive samples are better for this.</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/Data Engineering.html">Data Engineering</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html">Datomic: Event Sourcing without the hassle &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/2019-09-13-diversified-sampling-mining-large-datasets-for-special-cases.html">&#39;Diversified Sampling&#39;: mining large datasets for special cases</a></li>
+                        
+                        <li><a href="/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html">Datomic: Event Sourcing without the hassle</a></li>
+                        
+                        <li><a href="/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a Lingua Franca for domain modeling</a></li>
+                        
+                        <li><a href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant</a></li>
+                        
+                        <li><a href="/posts/2018-01-06-so-yeah-about-clojures-syntax.html">So yeah, about Clojure&#39;s syntax...</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/Data Engineering.html">Data Engineering</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>

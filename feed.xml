@@ -12,11 +12,197 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Thu, 22 Nov 2018 08:37:58 +0100
+Fri, 13 Sep 2019 14:28:09 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/2019-09-13-diversified-sampling-mining-large-datasets-for-special-cases.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/2019-09-13-diversified-sampling-mining-large-datasets-for-special-cases.html
+</link>
+<title>
+'Diversified Sampling': mining large datasets for special cases
+</title>
+<description>
+ &lt;p&gt;In this article, I want to share a little &lt;i&gt;data engineering&lt;/i&gt; trick that I've used for building programs that consume poorly-understood data, which I'm calling 'Diversified Sampling'. This terminology is totally made up by me, and there's a high chance that this technique already exists with another name, or that the scholars have deemed it too trivial to name it at all. Hopefully some people more knowledgeable than me will comment on this.&lt;/p&gt;&lt;p&gt;&lt;strong&gt;TL;DR:&lt;/strong&gt; the objective is to build a small sample of the data in which special cases are likely to be represented. The strategy is to have each data item emit a list of 'features', and to boost the probability of selecting rare features. A shallow understanding of the data is often enough to design an effective features extraction. &lt;br /&gt;  &lt;/p&gt;&lt;h2 id=&quot;the&amp;#95;problem&quot;&gt;The problem&lt;/h2&gt;&lt;p&gt;Suppose that you're given a large datasets of documents, and you have to build a system that extracts information from these documents. You only have a poor technical understanding of these documents: basically, some told you informally what the documents are about, and if you're lucky you have a vague spec or schema which will be mostly respected by the documents. What's more, the dataset is big enough that it would take hours for a machine to process it fully, and many lifetimes for you to read all the documents with your own eyes. Yet you have to write a program that processes these documents reliably. What do you do?&lt;/p&gt;&lt;p&gt;As an case study for this article, we're going to use the Articles data dump &lt;a href='https://doaj.org/public-data-dump'&gt;of the Directory of Open Access Journals&lt;/a&gt; (DOAJ), which contains metadata about around 4 million academic articles in the form of JSON documents. To make things concrete, here's one document from this dataset:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;json&quot;&gt;{
+  &amp;quot;last&amp;#95;updated&amp;quot; : &amp;quot;2019-02-21T17:05:46Z&amp;quot;,
+  &amp;quot;id&amp;quot; : &amp;quot;cfc9b25374b6400da55a35d2815cc915&amp;quot;,
+  &amp;quot;bibjson&amp;quot; : {
+    &amp;quot;abstract&amp;quot; : &amp;quot;The author estimates both medical insurance agencies’ performance in the field of providing and protecting the rights of insured persons within compulsory medical insurance and the role of insurance medical agencies in the system of social protection of citizens&amp;quot;,
+    &amp;quot;month&amp;quot; : &amp;quot;4&amp;quot;,
+    &amp;quot;journal&amp;quot; : {
+      &amp;quot;publisher&amp;quot; : &amp;quot;Omsk Law Academy&amp;quot;,
+      &amp;quot;license&amp;quot; : &amp;#91; {
+        &amp;quot;url&amp;quot; : &amp;quot;http://en.vestnik.omua.ru/content/open-access-policy&amp;quot;,
+        &amp;quot;open&amp;#95;access&amp;quot; : true,
+        &amp;quot;type&amp;quot; : &amp;quot;CC BY&amp;quot;,
+        &amp;quot;title&amp;quot; : &amp;quot;CC BY&amp;quot;
+      } &amp;#93;,
+      &amp;quot;language&amp;quot; : &amp;#91; &amp;quot;RU&amp;quot; &amp;#93;,
+      &amp;quot;title&amp;quot; : &amp;quot;Vestnik Omskoj Ûridičeskoj Akademii&amp;quot;,
+      &amp;quot;country&amp;quot; : &amp;quot;RU&amp;quot;,
+      &amp;quot;number&amp;quot; : &amp;quot;27&amp;quot;,
+      &amp;quot;issns&amp;quot; : &amp;#91; &amp;quot;2306-1340&amp;quot;, &amp;quot;2410-8812&amp;quot; &amp;#93;
+    },
+    &amp;quot;keywords&amp;quot; : &amp;#91; &amp;quot;Compulsory medical insurance&amp;quot;, &amp;quot;insurance medical agencies&amp;quot;, &amp;quot;free medical aid&amp;quot;, &amp;quot;social protection of citizens&amp;quot; &amp;#93;,
+    &amp;quot;title&amp;quot; : &amp;quot;The Role of Medical Insurance Agencies in the System of Social Protection of Citizens&amp;quot;,
+    &amp;quot;author&amp;quot; : &amp;#91; {
+      &amp;quot;affiliation&amp;quot; : &amp;quot;Omsk Law Academy&amp;quot;,
+      &amp;quot;name&amp;quot; : &amp;quot;Beketova A. V. &amp;quot;
+    } &amp;#93;,
+    &amp;quot;year&amp;quot; : &amp;quot;2015&amp;quot;,
+    &amp;quot;link&amp;quot; : &amp;#91; {
+      &amp;quot;url&amp;quot; : &amp;quot;http://vestnik.omua.ru/?q=content/rol-strahovyh-medicinskih-organizaciy-v-sisteme-socialnoy-zashchity-naseleniya&amp;quot;,
+      &amp;quot;type&amp;quot; : &amp;quot;fulltext&amp;quot;
+    } &amp;#93;,
+    &amp;quot;start&amp;#95;page&amp;quot; : &amp;quot;52&amp;quot;,
+    &amp;quot;identifier&amp;quot; : &amp;#91; {
+      &amp;quot;type&amp;quot; : &amp;quot;pissn&amp;quot;,
+      &amp;quot;id&amp;quot; : &amp;quot;2306-1340&amp;quot;
+    }, {
+      &amp;quot;type&amp;quot; : &amp;quot;eissn&amp;quot;,
+      &amp;quot;id&amp;quot; : &amp;quot;2410-8812&amp;quot;
+    } &amp;#93;,
+    &amp;quot;end&amp;#95;page&amp;quot; : &amp;quot;55&amp;quot;,
+    &amp;quot;subject&amp;quot; : &amp;#91; {
+      &amp;quot;scheme&amp;quot; : &amp;quot;LCC&amp;quot;,
+      &amp;quot;term&amp;quot; : &amp;quot;Law&amp;quot;,
+      &amp;quot;code&amp;quot; : &amp;quot;K&amp;quot;
+    } &amp;#93;
+  },
+  &amp;quot;created&amp;#95;date&amp;quot; : &amp;quot;2018-02-19T06:45:24Z&amp;quot;
+}
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&quot;why&amp;#95;we&amp;#95;need&amp;#95;small&amp;#95;samples&quot;&gt;Why we need small samples&lt;/h2&gt;&lt;p&gt;Because the dataset is so big, the need quickly arises to work on small samples of the documents, for several uses:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;For &lt;strong&gt;'having a look'&lt;/strong&gt; at the data, e.g getting familiar with the schema of the documents to understand what attributes are available and what they mean.&lt;/li&gt;&lt;li&gt;For &lt;strong&gt;example-based testing&lt;/strong&gt;: you'll likely want to test whatever code you write for extracting information from the data, so a sample can give you a set of realistic examples on which you can test your processing code quickly.&lt;/li&gt;&lt;li&gt;Even if you prefer &lt;strong&gt;generative testing&lt;/strong&gt;, you're going to have to develop a model of the data, and to iterate on that model you'll want to validate it rapidly against real-world examples.&lt;/li&gt;&lt;li&gt;On a related topic, for &lt;strong&gt;data validation&lt;/strong&gt;: your program will make assumptions about the properties of the data, and you'll want to check that new documents fall within these assumptions. A small sample can help you iterate on these assumptions rapidly, after which you can gain even more confidence by testing these assumptions against the entire dataset.&lt;/li&gt;&lt;/ol&gt;&lt;h2 id=&quot;naive&amp;#95;approach:&amp;#95;uniform&amp;#95;sampling&quot;&gt;Naive approach: uniform sampling&lt;/h2&gt;&lt;p&gt;The most intuitive approach to sampling is simply to select each document randomly with uniform probability; for example, to build a sample of about 1000 documents out of the 4.2 million documents of the DOAJ dataset, I could run them through an algorithm that keeps each document with probability 1000 / 4200000. &lt;/p&gt;&lt;p&gt;Unfortunately, this is likely to be insufficient, because it will fail to capture some rare pathological cases that need to be handled nonetheless. Here are a few examples of 'pathological cases':&lt;/p&gt;&lt;ol&gt;&lt;li&gt;a few documents may be lacking an &lt;code&gt;id&lt;/code&gt; attribute.&lt;/li&gt;&lt;li&gt;a few documents may have their &lt;code&gt;start&amp;#95;page&lt;/code&gt; attribute written in roman numerals (true story!)&lt;/li&gt;&lt;li&gt;a few documents may have more than a thousand &lt;code&gt;keywords&lt;/code&gt;, and your processing code will choke on that.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;When you build on uniform samples, it's common to write code that seems to work perfectly fine, and then fails a few hours into processing because of one pathological input. As your information-extracting code evolves, it's important to be able to detect these edge cases rapidly.&lt;/p&gt;&lt;p&gt;For testing purposes, it's better to have samples in which the special cases are over-represented. We don't want to select all documents with equal probability: we want the &lt;i&gt;freaks&lt;/i&gt;! But how do you select for pathological cases, since your problem is precisely that you have an incomplete understanding of how the data might behave?&lt;/p&gt;&lt;h2 id=&quot;the&amp;#95;algorithm:&amp;#95;selecting&amp;#95;rare&amp;#95;features&quot;&gt;The algorithm: selecting rare features&lt;/h2&gt;&lt;p&gt;The idea behind the approach I'm proposing here is that you can usually detect special cases even without a good understanding of the data semantics, based on some 'mechanical' aspects of the data, such as the set of attributes present in a document, or the presence of rare characters.  &lt;/p&gt;&lt;p&gt;More precisely, the idea is that you would implement a function that extracts from any given document a set of 'features' (a list of Strings); the guiding principle for designing the features function is that pathological cases should exhibit rare features. For example, the features extracted from the above example might be:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;bibjson
+bibjson.abstract
+bibjson.author
+bibjson.author.&amp;#91;&amp;#93;.affiliation
+bibjson.author.&amp;#91;&amp;#93;.name
+bibjson.end&amp;#95;page
+bibjson.identifier
+bibjson.identifier.&amp;#91;&amp;#93;.id
+bibjson.identifier.&amp;#91;&amp;#93;.type
+bibjson.journal
+bibjson.journal.country
+bibjson.journal.issns
+bibjson.journal.issns.0
+bibjson.journal.issns.1
+bibjson.journal.language
+bibjson.journal.license
+bibjson.journal.license.&amp;#91;&amp;#93;.open&amp;#95;access
+bibjson.journal.license.&amp;#91;&amp;#93;.title
+bibjson.journal.license.&amp;#91;&amp;#93;.type
+bibjson.journal.license.&amp;#91;&amp;#93;.url
+bibjson.journal.number
+bibjson.journal.publisher
+bibjson.journal.title
+bibjson.keywords
+bibjson.link
+bibjson.link.&amp;#91;&amp;#93;.type
+bibjson.link.&amp;#91;&amp;#93;.url
+bibjson.month
+bibjson.start&amp;#95;page
+bibjson.subject
+bibjson.subject.&amp;#91;&amp;#93;.code
+bibjson.subject.&amp;#91;&amp;#93;.scheme
+bibjson.subject.&amp;#91;&amp;#93;.term
+bibjson.title
+bibjson.year
+created&amp;#95;date
+doaj.article.link-type/fulltext
+doaj.article.n-keywords/highest1bit=4
+doaj.article.n-languages/highest1bit=1
+doaj.article.n-licenses/highest1bit=1
+doaj.article.n-subjects/highest1bit=1
+doaj.article.subject-scheme/LCC
+doaj.identifier-type/eissn
+doaj.identifier-type/pissn
+id
+last&amp;#95;updated
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Notice how most of these 'features' can be derived very mechanically from the data:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;present attributes / paths:&lt;/strong&gt; for example, &lt;code&gt;bibjson.author.&amp;#91;&amp;#93;.name&lt;/code&gt; tells you that the document is a map with a &lt;code&gt;bibjson&lt;/code&gt; key, containing a map with an &lt;code&gt;author&lt;/code&gt; key, containing an array of maps with a &lt;code&gt;name&lt;/code&gt; key. Such a feature can be extracted from any JSON document without any more knowledge of what it contains.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;cardinality:&lt;/strong&gt; for example, &lt;code&gt;doaj.article.n-keywords/highest1bit=4&lt;/code&gt; tells you that the article has between 4 and 7 &lt;code&gt;keywords&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;enumerations:&lt;/strong&gt; for example, &lt;code&gt;doaj.article.subject-scheme/LCC&lt;/code&gt; tells you that the article has a subject of scheme &lt;code&gt;LCC&lt;/code&gt;, whatever that means. You don't need to know what a subject or a scheme is to make this extraction: you only need to 'smell' that we're dealing with an enumerated attribute.&lt;/li&gt;&lt;li&gt;other good candidates include character ranges (for detecting diacritics / XML markup / encoding errors), rounded String lengths, URL or date patterns, JSON value types, etc.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Once you can extract appropriate features, the algorithm is simple to describe: &lt;strong&gt;each document is selected with a probability proportional to the rarity (inverse frequency) of its rarest feature.&lt;/strong&gt; More precisely:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;You parameterize your algorithm with a small number &lt;code&gt;K&lt;/code&gt; (e.g 10), meaning that every feature should on average be represented at least &lt;code&gt;K&lt;/code&gt; times.&lt;/li&gt;&lt;li&gt;For each article, you draw a random number &lt;code&gt;r&lt;/code&gt; between 0 and 1. If the document has a feature such that &lt;code&gt;r &amp;lt; K/M&lt;/code&gt;, where &lt;code&gt;M&lt;/code&gt; is the number of times that the feature appears in the entire dataset, then it is selected. In particular, if a feature is rare to the point of being represented fewer than &lt;code&gt;K&lt;/code&gt; times, then the documents having it are guaranteed to be selected.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;Some notes:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;A generally useful refinement from the above is to consider the &lt;i&gt;absence&lt;/i&gt;  of a feature as a feature itself (for instance, this is how you would select the rare occurrence of an &lt;code&gt;id&lt;/code&gt; field missing). With the above notation, this implies comparing &lt;code&gt;r&lt;/code&gt; to either &lt;code&gt;K/M&lt;/code&gt; or &lt;code&gt;K/&amp;#40;N-M&amp;#41;&lt;/code&gt; depending on whether the feature is present or not in the document, where &lt;code&gt;N&lt;/code&gt; denotes the total number of articles.&lt;/li&gt;&lt;li&gt;The algorithm does 2 linear passes on the entire data, and is well suited to be run in a parallel and distributed architecture like MapReduce / Spark / etc. while accumulating very small result. Provided that your features function is not too expensive, this can run very fast.&lt;/li&gt;&lt;li&gt;You choose &lt;code&gt;K&lt;/code&gt; based on the desired sample size. In practice, it can be hard to predict what the resulting sample size will be, because it depends on the number of features but also on how they correlate.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;In light of this, let's have a look at the distribution of features in our dataset:&lt;/p&gt;&lt;pre&gt;&lt;code&gt;|                                 Feature | #articles |
+|-----------------------------------------+-----------|
+|                                   admin |   1262315 |
+|                              admin.seal |   1262315 |
+|                                 bibjson |   3925522 |
+|                        bibjson.abstract |   3528943 |
+|                          bibjson.author |   3892589 |
+|           bibjson.author.&amp;#91;&amp;#93;.affiliation |   2075706 |
+|                  bibjson.author.&amp;#91;&amp;#93;.name |   3885804 |
+|                        bibjson.end&amp;#95;page |   2551540 |
+|                      bibjson.identifier |   3925522 |
+|                bibjson.identifier.&amp;#91;&amp;#93;.id |   3925522 |
+|              bibjson.identifier.&amp;#91;&amp;#93;.type |   3925522 |
+|                         bibjson.journal |   3925522 |
+|                 bibjson.journal.country |   3925522 |
+|                   bibjson.journal.issns |   3925522 |
+|                 bibjson.journal.issns.0 |   3925522 |
+|                 bibjson.journal.issns.1 |   2105552 |
+|                bibjson.journal.language |   3925522 |
+|                 bibjson.journal.license |   3925522 |
+|  bibjson.journal.license.&amp;#91;&amp;#93;.open&amp;#95;access |   3909861 |
+|        bibjson.journal.license.&amp;#91;&amp;#93;.title |   3922195 |
+|         bibjson.journal.license.&amp;#91;&amp;#93;.type |   3922195 |
+|          bibjson.journal.license.&amp;#91;&amp;#93;.url |   3918950 |
+|                  bibjson.journal.number |   3389896 |
+|               bibjson.journal.publisher |   3925522 |
+|                   bibjson.journal.title |   3925522 |
+|                  bibjson.journal.volume |   3800165 |
+|                        bibjson.keywords |   2340697 |
+|                            bibjson.link |   3925522 |
+|            bibjson.link.&amp;#91;&amp;#93;.content&amp;#95;type |   2068285 |
+|                    bibjson.link.&amp;#91;&amp;#93;.type |   3912438 |
+|                     bibjson.link.&amp;#91;&amp;#93;.url |   3912438 |
+|                           bibjson.month |   3237064 |
+|                      bibjson.start&amp;#95;page |   3167003 |
+|                         bibjson.subject |   3925522 |
+|                 bibjson.subject.&amp;#91;&amp;#93;.code |   3918612 |
+|               bibjson.subject.&amp;#91;&amp;#93;.scheme |   3918612 |
+|                 bibjson.subject.&amp;#91;&amp;#93;.term |   3918612 |
+|                           bibjson.title |   3922426 |
+|                            bibjson.year |   3855525 |
+|                            created&amp;#95;date |   3925522 |
+|         doaj.article.link-type/fulltext |   3912438 |
+|   doaj.article.n-keywords/highest1bit=0 |   1584825 |
+|   doaj.article.n-keywords/highest1bit=1 |    200419 |
+| doaj.article.n-keywords/highest1bit=128 |        47 |
+|  doaj.article.n-keywords/highest1bit=16 |      8776 |
+|   doaj.article.n-keywords/highest1bit=2 |    446826 |
+| doaj.article.n-keywords/highest1bit=256 |         2 |
+|  doaj.article.n-keywords/highest1bit=32 |       606 |
+|   doaj.article.n-keywords/highest1bit=4 |   1466157 |
+|  doaj.article.n-keywords/highest1bit=64 |       218 |
+|   doaj.article.n-keywords/highest1bit=8 |    217646 |
+|  doaj.article.n-languages/highest1bit=0 |         1 |
+|  doaj.article.n-languages/highest1bit=1 |   2726455 |
+|  doaj.article.n-languages/highest1bit=2 |   1058128 |
+|  doaj.article.n-languages/highest1bit=4 |    137890 |
+|  doaj.article.n-languages/highest1bit=8 |      3048 |
+|   doaj.article.n-licenses/highest1bit=0 |      3327 |
+|   doaj.article.n-licenses/highest1bit=1 |   3922195 |
+|   doaj.article.n-subjects/highest1bit=0 |      6910 |
+|   doaj.article.n-subjects/highest1bit=1 |   2405221 |
+|   doaj.article.n-subjects/highest1bit=2 |   1459074 |
+|   doaj.article.n-subjects/highest1bit=4 |     53447 |
+|   doaj.article.n-subjects/highest1bit=8 |       870 |
+|        doaj.article.subject-scheme/DOAJ |      4633 |
+|         doaj.article.subject-scheme/LCC |   3918612 |
+|                doaj.identifier-type/DOI |     47595 |
+|                doaj.identifier-type/doi |   2724699 |
+|              doaj.identifier-type/eissn |   2974967 |
+|               doaj.identifier-type/issn |      1626 |
+|              doaj.identifier-type/pissn |   2831153 |
+|          doaj.identifier-type/publisher |      1150 |
+|                                      id |   3925522 |
+|                            last&amp;#95;updated |   3925522 |
+&lt;/code&gt;&lt;/pre&gt;&lt;p&gt;Looking at this, we see that there are some irregularities which we could have easily missed with naive sampling:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;One article has zero languages - this could easily have caused an error in our processing.&lt;/li&gt;&lt;li&gt;4633 (out of 4 million!) articles have a DOAJ-specific subject scheme, instead of the almost ubiquitous LCC.&lt;/li&gt;&lt;li&gt;1626 articles have an ISSN number which is classified neither as electronic (&lt;code&gt;eissn&lt;/code&gt;) nor print (&lt;code&gt;pissn&lt;/code&gt;)&lt;/li&gt;&lt;li&gt;We see an inconsistency in how DOI identifiers are declared - most of the time as &lt;code&gt;&amp;quot;doi&amp;quot;&lt;/code&gt;, and more rarely (47595) as &lt;code&gt;&amp;quot;DOI&amp;quot;&lt;/code&gt;.&lt;/li&gt;&lt;li&gt;49 articles have more than 128 keywords. This could cause performance issues, should we do some processing that emits tuples of these keywords.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;This isn't to bash on DOAJ - in my experience, compared to other academic publishers, their data exports are really a pleasure to work with. But it is a good reminder that real-world data tends to be full of surprises.&lt;/p&gt;&lt;p&gt;How much does Diversified Sampling increase our odds of selecting these special cases? Let's examine the example of the 4633 articles having a DOAJ-specific subject scheme:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;Naive sampling:&lt;/strong&gt; if you use the naive sampling method, aiming for a sample size of 1000 articles, you have a &lt;strong&gt;30.5%&lt;/strong&gt; chance of missing out on all 4633 articles.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Diversified sampling:&lt;/strong&gt; using diversified sampling with &lt;code&gt;K=20&lt;/code&gt; (which in this case yields a sample of about 500 articles), the odds of missing out on all 4633 are &lt;i&gt;at most&lt;/i&gt; &lt;strong&gt;0.0000002%&lt;/strong&gt;. There's a mathematical approximation that sheds some light on this: even when &lt;code&gt;K &amp;lt;&amp;lt; M&lt;/code&gt;, then &lt;code&gt;&amp;#40;1- K/M&amp;#41;&amp;#94;M ≈ exp&amp;#40;-K&amp;#41; ≈ &amp;#40;0.37&amp;#41;&amp;#94;K&lt;/code&gt;.&lt;/li&gt;&lt;/ul&gt;&lt;h2 id=&quot;pitfalls&quot;&gt;Pitfalls&lt;/h2&gt;&lt;h3 id=&quot;beware&amp;#95;of&amp;#95;features&amp;#95;explosion&quot;&gt;Beware of features explosion&lt;/h3&gt;&lt;p&gt;If your features function generates too many features, then your sample size will tend to explode, and the pathological cases you were mining for will be diluted in falsely special documents. For example, in our DOAJ example, the exact number of keywords or the length of the abstract would be bad features, because these will tend to take very dispersed values that will be interpreted as rare features; when dealing with cardinalities like this, it's better to use logarithmic buckets instead of exact values.&lt;/p&gt;&lt;h3 id=&quot;design&amp;#95;your&amp;#95;features&amp;#95;function&amp;#95;well&quot;&gt;Design your features function well&lt;/h3&gt;&lt;p&gt;More generally, the entire principle of this sampling algorithm relies on emitting features that correspond well to special cases. There's no one-size-fits-all solution for this: you will have to look at the data and make ad hoc guesses.&lt;/p&gt;&lt;h3 id=&quot;do&amp;#95;not&amp;#95;use&amp;#95;diversified&amp;#95;sampling&amp;#95;for&amp;#95;statistics&quot;&gt;Do not use Diversified Sampling for statistics&lt;/h3&gt;&lt;p&gt;Do not use the diversified sample to compute aggregates like the average number of keywords. By design, Diversified Sampling selects mostly outliers which are not representative of the trends in your data. Naive samples are better for this.&lt;/p&gt;
+</description>
+<pubDate>
+Fri, 13 Sep 2019 00:00:00 +0200
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html
@@ -1017,7 +1203,7 @@ Datomic: this is not the history you're looking for
              &amp;#91;&amp;#40;&amp;lt;= ?t0 ?time&amp;#41;&amp;#93; &amp;#91;&amp;#40;&amp;lt; ?time ?t1&amp;#41;&amp;#93;&amp;#93;
         db &amp;#91;:blog.post/id post-id&amp;#93; t0 t1&amp;#41;
     &amp;#40;or 0&amp;#41;&amp;#41;&amp;#41;
-&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&quot;taking&amp;#95;a&amp;#95;step&amp;#95;back:&amp;#95;event&amp;#95;time&amp;#95;vs&amp;#95;recording&amp;#95;time&quot;&gt;Taking a step back: event time vs recording time&lt;/h2&gt;&lt;p&gt;What just happened here? We've just seen two very tempting uses of &lt;code&gt;db.asOf&amp;#40;&amp;#41;&lt;/code&gt; and &lt;code&gt;:db/txInstant&lt;/code&gt;  which turn out to be prohibitively constraining as your system evolves (schema growth, data migrations, deferred imports, etc.),   because you have very little control over them.  &lt;strong&gt;Datomic does not let you change your mind about the information you encode in its time-travel features,&lt;/strong&gt; and that's usually too big a constraint.&lt;/p&gt;&lt;p&gt;This is not to mean Datomic time-travel features aren't useful - they're extremely valuable for debugging, auditing,  and integrating to other data systems. But you should probably not implement your business logic with them -  in particular, &lt;strong&gt;if your system needs to offer time-related functionality, it should probably not be implemented using Datomic's own time-travel features.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Of course, I can already here some protests: &lt;em&gt;Wait, I was told Datomic was great for keeping track of time!?&lt;/em&gt;&lt;/p&gt;&lt;p&gt;I think the root of this issue is that we use the word 'time' to denote 2 essentially distinct concepts:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;&lt;strong&gt;event time&lt;/strong&gt;: the time at which stuff happened.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;recording time&lt;/strong&gt;: the time at which you're system &lt;em&gt;learns&lt;/em&gt; that stuff happened.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;em&gt;(Disclaimer: this terminology is totally made up by me as I'm writing this.)&lt;/em&gt;&lt;/p&gt;&lt;p&gt;For instance: imagine you're saling on the Atlantic Ocean, in the middle of a storm. At 8:03 AM, a nasty wave wipes the deck clean  and you have to swim back to the boat. At 6:12 PM, you're sitting comfortably in the cabin, writing in the boat's log:  &quot;At 8:03 AM, a nasty wave made me fall from the boat.&quot; 8:03 AM is the event time; 6:12 PM is the recording time.  These are obviously 2 distinct times (which is a good thing, otherwise the boat's log would've ended up in the water).&lt;/p&gt;&lt;p&gt;Datomic, is great at reifying recording time, and giving you leverage over it.  On the other hand, mainstream mutable databases have not really educated us to the distinction between event time and recording time,  because they essentially give you no access to recording time, which makes the notion not very interesting.  Finally, these notions are not specific to Datomic - they probably generalize to any event-sourcing system.&lt;/p&gt;&lt;h2 id=&quot;what&amp;#95;are&amp;#95;datomic&amp;#95;historical&amp;#95;features&amp;#95;good&amp;#95;for&amp;#95;then?&quot;&gt;What are Datomic historical features good for then?&lt;/h2&gt;&lt;p&gt;In short, they're mostly useful for the generic 'technical housekeeping' of your system:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;Preventing information loss:&lt;/strong&gt; you have an easy-to-query archive of every piece of information that was ever saved in your system - and you don't have to anticipate how you're going to leverage it.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Auditing:&lt;/strong&gt; you can know exactly when a piece of information entered your system and how it evolved in it (especially if you're &lt;a href='http://blog.datomic.com/2015/12/reified-transactions.html'&gt;annotating the transactions&lt;/a&gt; in which these changes occurred).&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Debugging:&lt;/strong&gt; you can reproduce the conditions of a bug at the time it happened.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Change detection:&lt;/strong&gt; answering 'what changed' questions, which is very valuable when integrating Datomic to 'derived data' systems.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Having said that, it's not entirely the case that Datomic's time-travel features don't help you manage event time - they do, precisely by preventing information loss.&lt;/p&gt;&lt;p&gt;For instance, let's go back to our 'users like posts' example. Imagine that you've kept track of what users like which posts using the first approach, that is using a single &lt;code&gt;:user/likes-post&lt;/code&gt; attribute. Then you realize you'd like to keep track of when that happens, and therefore migrate to the second approach - that is, using an explicit 'like' entity. Using &lt;code&gt;:db/txInstant&lt;/code&gt;, you will at least be able to keep track of time for the likes you've collected so far - it's a bit hacky and might be inaccurate in some cases, but it's much better than no information at all.&lt;/p&gt;&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;&lt;p&gt;If you're new to Datomic, you probably have the same misconceptions as I did regarding the use of Datomic's historical features.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;bad news:&lt;/strong&gt; you've probably over-estimated the usefulness of these features for implementing your own specific time travel. Unless you really know what you're doing, I recommend you don't use &lt;code&gt;db.asOf&amp;#40;&amp;#41;&lt;/code&gt;, &lt;code&gt;db.history&amp;#40;&amp;#41;&lt;/code&gt;, and &lt;code&gt;:db/txInstant&lt;/code&gt; in your business logic code.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;good news:&lt;/strong&gt; you've probably under-estimated the usefulness of these features for managing your entire system as a programmer.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;I believe the key to getting past this confusion is the distinction between &lt;strong&gt;event time&lt;/strong&gt; (when things happened)  and &lt;strong&gt;recording time&lt;/strong&gt; (when your system learns they happened).&lt;/p&gt;&lt;p&gt;Finally, I advise you don't give too much importance to the time-travel features of Datomic - they're just the icing on the cake.  &lt;em&gt;The main benefits of immutability don't arise from time travel; they arise from unlimited consistent reads, locally-scoped changes, easy change detection, and all that can be built on top of them.&lt;/em&gt;&lt;/p&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;h2 id=&quot;taking&amp;#95;a&amp;#95;step&amp;#95;back:&amp;#95;event&amp;#95;time&amp;#95;vs&amp;#95;recording&amp;#95;time&quot;&gt;Taking a step back: event time vs recording time&lt;/h2&gt;&lt;p&gt;What just happened here? We've just seen two very tempting uses of &lt;code&gt;db.asOf&amp;#40;&amp;#41;&lt;/code&gt; and &lt;code&gt;:db/txInstant&lt;/code&gt;  which turn out to be prohibitively constraining as your system evolves (schema growth, data migrations, deferred imports, etc.),   because you have very little control over them.  &lt;strong&gt;Datomic does not let you change your mind about the information you encode in its time-travel features,&lt;/strong&gt; and that's usually too big a constraint.&lt;/p&gt;&lt;p&gt;This is not to mean Datomic time-travel features aren't useful - they're extremely valuable for debugging, auditing,  and integrating to other data systems. But you should probably not implement your business logic with them -  in particular, &lt;strong&gt;if your system needs to offer time-related functionality, it should probably not be implemented using Datomic's own time-travel features.&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Of course, I can already here some protests: &lt;em&gt;Wait, I was told Datomic was great for keeping track of time!?&lt;/em&gt;&lt;/p&gt;&lt;p&gt;I think the root of this issue is that we use the word 'time' to denote 2 essentially distinct concepts:&lt;/p&gt;&lt;ol&gt;&lt;li&gt;&lt;strong&gt;event time&lt;/strong&gt;: the time at which stuff happened.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;recording time&lt;/strong&gt;: the time at which you're system &lt;em&gt;learns&lt;/em&gt; that stuff happened.&lt;/li&gt;&lt;/ol&gt;&lt;p&gt;&lt;em&gt;(Disclaimer: this terminology is totally made up by me as I'm writing this.)&lt;/em&gt;&lt;/p&gt;&lt;p&gt;For instance: imagine you're sailing on the Atlantic Ocean, in the middle of a storm. At 8:03 AM, a nasty wave wipes the deck clean  and you have to swim back to the boat. At 6:12 PM, you're sitting comfortably in the cabin, writing in the boat's log:  &quot;At 8:03 AM, a nasty wave made me fall from the boat.&quot; 8:03 AM is the event time; 6:12 PM is the recording time.  These are obviously 2 distinct times (which is a good thing, otherwise the boat's log would've ended up in the water).&lt;/p&gt;&lt;p&gt;Datomic, is great at reifying recording time, and giving you leverage over it.  On the other hand, mainstream mutable databases have not really educated us to the distinction between event time and recording time,  because they essentially give you no access to recording time, which makes the notion not very interesting.  Finally, these notions are not specific to Datomic - they probably generalize to any event-sourcing system.&lt;/p&gt;&lt;h2 id=&quot;what&amp;#95;are&amp;#95;datomic&amp;#95;historical&amp;#95;features&amp;#95;good&amp;#95;for&amp;#95;then?&quot;&gt;What are Datomic historical features good for then?&lt;/h2&gt;&lt;p&gt;In short, they're mostly useful for the generic 'technical housekeeping' of your system:&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;Preventing information loss:&lt;/strong&gt; you have an easy-to-query archive of every piece of information that was ever saved in your system - and you don't have to anticipate how you're going to leverage it.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Auditing:&lt;/strong&gt; you can know exactly when a piece of information entered your system and how it evolved in it (especially if you're &lt;a href='http://blog.datomic.com/2015/12/reified-transactions.html'&gt;annotating the transactions&lt;/a&gt; in which these changes occurred).&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Debugging:&lt;/strong&gt; you can reproduce the conditions of a bug at the time it happened.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;Change detection:&lt;/strong&gt; answering 'what changed' questions, which is very valuable when integrating Datomic to 'derived data' systems.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;Having said that, it's not entirely the case that Datomic's time-travel features don't help you manage event time - they do, precisely by preventing information loss.&lt;/p&gt;&lt;p&gt;For instance, let's go back to our 'users like posts' example. Imagine that you've kept track of what users like which posts using the first approach, that is using a single &lt;code&gt;:user/likes-post&lt;/code&gt; attribute. Then you realize you'd like to keep track of when that happens, and therefore migrate to the second approach - that is, using an explicit 'like' entity. Using &lt;code&gt;:db/txInstant&lt;/code&gt;, you will at least be able to keep track of time for the likes you've collected so far - it's a bit hacky and might be inaccurate in some cases, but it's much better than no information at all.&lt;/p&gt;&lt;h2 id=&quot;summary&quot;&gt;Summary&lt;/h2&gt;&lt;p&gt;If you're new to Datomic, you probably have the same misconceptions as I did regarding the use of Datomic's historical features.&lt;/p&gt;&lt;ul&gt;&lt;li&gt;&lt;strong&gt;bad news:&lt;/strong&gt; you've probably over-estimated the usefulness of these features for implementing your own specific time travel. Unless you really know what you're doing, I recommend you don't use &lt;code&gt;db.asOf&amp;#40;&amp;#41;&lt;/code&gt;, &lt;code&gt;db.history&amp;#40;&amp;#41;&lt;/code&gt;, and &lt;code&gt;:db/txInstant&lt;/code&gt; in your business logic code.&lt;/li&gt;&lt;li&gt;&lt;strong&gt;good news:&lt;/strong&gt; you've probably under-estimated the usefulness of these features for managing your entire system as a programmer.&lt;/li&gt;&lt;/ul&gt;&lt;p&gt;I believe the key to getting past this confusion is the distinction between &lt;strong&gt;event time&lt;/strong&gt; (when things happened)  and &lt;strong&gt;recording time&lt;/strong&gt; (when your system learns they happened).&lt;/p&gt;&lt;p&gt;Finally, I advise you don't give too much importance to the time-travel features of Datomic - they're just the icing on the cake.  &lt;em&gt;The main benefits of immutability don't arise from time travel; they arise from unlimited consistent reads, locally-scoped changes, easy change detection, and all that can be built on top of them.&lt;/em&gt;&lt;/p&gt;
 </description>
 <pubDate>
 Sat, 08 Jul 2017 00:00:00 +0200

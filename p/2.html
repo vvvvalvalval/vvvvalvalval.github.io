@@ -53,6 +53,17 @@
 <div id="post">
     
     <div class="post-header">
+        <h2>Using PostgreSQL temporary views for expressing business logic</h2>
+        <div id="post-meta">
+            
+            <div class="date">November 5, 2017</div>
+        </div>
+    </div>
+    <p>I recently worked on a project which consisted of merging related data exports from a variety of sources and extracting  accounting information from them. Because the problem was inherently very relational, I was naturally led to use an SQL  database in the project (in this case PostgreSQL).</p><p>I ended up expressing much more of the business logic than I thought using pure SQL - more precisely, <i>temporary SQL Views</i> -  so I thought I'd share my findings here.</p>
+    <a href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Continue reading &#8594;</a>
+    <hr>
+    
+    <div class="post-header">
         <h2>What makes a good REPL?</h2>
         <div id="post-meta">
             
@@ -96,17 +107,6 @@
     <a href="/posts/2016-01-03-architecture-datomic-branching-reality.html">Continue reading &#8594;</a>
     <hr>
     
-    <div class="post-header">
-        <h2>A bottom-up approach to state in Reagent</h2>
-        <div id="post-meta">
-            
-            <div class="date">September 16, 2015</div>
-        </div>
-    </div>
-    <p>In this post, I'll present an alternative way of managing state in Reagent applications to what is currently made popular by libraries like <a href="https://github.com/Day8/re-frame">Re-frame</a>.</p><h2 id="tl;dr">TL;DR</h2>
-    <a href="/posts/2015-09-16-bottup-approach-to-reagent-state.html">Continue reading &#8594;</a>
-    <hr>
-    
 
     <div id="prev-next">
         
@@ -132,6 +132,8 @@
                     <h3>Recent Posts</h3>
                     <ul>
                         
+                        <li><a href="/posts/2019-09-13-diversified-sampling-mining-large-datasets-for-special-cases.html">&#39;Diversified Sampling&#39;: mining large datasets for special cases</a></li>
+                        
                         <li><a href="/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html">Datomic: Event Sourcing without the hassle</a></li>
                         
                         <li><a href="/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html">DataScript as a Lingua Franca for domain modeling</a></li>
@@ -139,8 +141,6 @@
                         <li><a href="/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html">Making a Datomic system GDPR-compliant</a></li>
                         
                         <li><a href="/posts/2018-01-06-so-yeah-about-clojures-syntax.html">So yeah, about Clojure&#39;s syntax...</a></li>
-                        
-                        <li><a href="/posts/using-postgresql-temporary-views-for-expressing-business-logic.html">Using PostgreSQL temporary views for expressing business logic</a></li>
                         
                     </ul>
                 </div>
@@ -150,9 +150,11 @@
                     <h3>Tags</h3>
                     <ul>
                         
-                        <li><a href="/Architecture.html">Architecture</a></li>
+                        <li><a href="/Data Engineering.html">Data Engineering</a></li>
                         
                         <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
                         
                         <li><a href="/Datomic.html">Datomic</a></li>
                         
