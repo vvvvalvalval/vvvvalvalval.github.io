@@ -5,7 +5,7 @@
 http://vvvvalvalval.github.io/Python.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -13,7 +13,7 @@ http://vvvvalvalval.github.io/Python.html
 http://vvvvalvalval.github.io/tutorial.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -21,7 +21,7 @@ http://vvvvalvalval.github.io/tutorial.html
 http://vvvvalvalval.github.io/tags.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -29,7 +29,7 @@ http://vvvvalvalval.github.io/tags.html
 http://vvvvalvalval.github.io/index.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -37,7 +37,7 @@ http://vvvvalvalval.github.io/index.html
 http://vvvvalvalval.github.io/posts/2016-07-24-datomic-web-app-a-practical-guide.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -45,7 +45,7 @@ http://vvvvalvalval.github.io/posts/2016-07-24-datomic-web-app-a-practical-guide
 http://vvvvalvalval.github.io/posts/what-makes-a-good-repl.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -53,7 +53,7 @@ http://vvvvalvalval.github.io/posts/what-makes-a-good-repl.html
 http://vvvvalvalval.github.io/posts/2018-11-12-datomic-event-sourcing-without-the-hassle.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -61,7 +61,7 @@ http://vvvvalvalval.github.io/posts/2018-11-12-datomic-event-sourcing-without-th
 http://vvvvalvalval.github.io/posts/2017-07-08-Datomic-this-is-not-the-history-youre-looking-for.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -69,7 +69,7 @@ http://vvvvalvalval.github.io/posts/2017-07-08-Datomic-this-is-not-the-history-y
 http://vvvvalvalval.github.io/posts/2015-09-06-Having-a-good-terminal-console-on-OS-X-in-2015.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -77,7 +77,7 @@ http://vvvvalvalval.github.io/posts/2015-09-06-Having-a-good-terminal-console-on
 http://vvvvalvalval.github.io/posts/2018-01-06-so-yeah-about-clojures-syntax.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -85,7 +85,7 @@ http://vvvvalvalval.github.io/posts/2018-01-06-so-yeah-about-clojures-syntax.htm
 http://vvvvalvalval.github.io/posts/using-postgresql-temporary-views-for-expressing-business-logic.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -93,7 +93,7 @@ http://vvvvalvalval.github.io/posts/using-postgresql-temporary-views-for-express
 http://vvvvalvalval.github.io/posts/2015-09-06-productive-git-setup.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -101,7 +101,7 @@ http://vvvvalvalval.github.io/posts/2015-09-06-productive-git-setup.html
 http://vvvvalvalval.github.io/posts/2019-12-03-inferring-earth-tilt-from-day-lengths.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -109,7 +109,7 @@ http://vvvvalvalval.github.io/posts/2019-12-03-inferring-earth-tilt-from-day-len
 http://vvvvalvalval.github.io/posts/2019-09-13-diversified-sampling-mining-large-datasets-for-special-cases.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -117,7 +117,7 @@ http://vvvvalvalval.github.io/posts/2019-09-13-diversified-sampling-mining-large
 http://vvvvalvalval.github.io/posts/2015-09-16-bottup-approach-to-reagent-state.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -125,7 +125,7 @@ http://vvvvalvalval.github.io/posts/2015-09-16-bottup-approach-to-reagent-state.
 http://vvvvalvalval.github.io/posts/2018-05-01-making-a-datomic-system-gdpr-compliant.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -133,7 +133,7 @@ http://vvvvalvalval.github.io/posts/2018-05-01-making-a-datomic-system-gdpr-comp
 http://vvvvalvalval.github.io/posts/2016-01-03-architecture-datomic-branching-reality.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -141,7 +141,15 @@ http://vvvvalvalval.github.io/posts/2016-01-03-architecture-datomic-branching-re
 http://vvvvalvalval.github.io/posts/2018-07-23-datascript-as-a-lingua-franca-for-domain-modeling.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
+</lastmod>
+</url>
+<url>
+<loc>
+http://vvvvalvalval.github.io/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html
+</loc>
+<lastmod>
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -149,7 +157,23 @@ http://vvvvalvalval.github.io/posts/2018-07-23-datascript-as-a-lingua-franca-for
 http://vvvvalvalval.github.io/Machine Learning.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
+</lastmod>
+</url>
+<url>
+<loc>
+http://vvvvalvalval.github.io/Mathematics.html
+</loc>
+<lastmod>
+2019-12-19
+</lastmod>
+</url>
+<url>
+<loc>
+http://vvvvalvalval.github.io/Information Theory.html
+</loc>
+<lastmod>
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -157,7 +181,7 @@ http://vvvvalvalval.github.io/Machine Learning.html
 http://vvvvalvalval.github.io/Physics.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -165,7 +189,7 @@ http://vvvvalvalval.github.io/Physics.html
 http://vvvvalvalval.github.io/SciPy.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -173,7 +197,7 @@ http://vvvvalvalval.github.io/SciPy.html
 http://vvvvalvalval.github.io/Architecture.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -181,7 +205,7 @@ http://vvvvalvalval.github.io/Architecture.html
 http://vvvvalvalval.github.io/404.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -189,7 +213,7 @@ http://vvvvalvalval.github.io/404.html
 http://vvvvalvalval.github.io/Programming.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -197,7 +221,7 @@ http://vvvvalvalval.github.io/Programming.html
 http://vvvvalvalval.github.io/SQL.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -205,7 +229,7 @@ http://vvvvalvalval.github.io/SQL.html
 http://vvvvalvalval.github.io/Data Engineering.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -213,7 +237,7 @@ http://vvvvalvalval.github.io/Data Engineering.html
 http://vvvvalvalval.github.io/tools.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -221,7 +245,7 @@ http://vvvvalvalval.github.io/tools.html
 http://vvvvalvalval.github.io/Reagent.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -229,7 +253,7 @@ http://vvvvalvalval.github.io/Reagent.html
 http://vvvvalvalval.github.io/Clojure.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -237,7 +261,7 @@ http://vvvvalvalval.github.io/Clojure.html
 http://vvvvalvalval.github.io/Scientific computing.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -245,7 +269,7 @@ http://vvvvalvalval.github.io/Scientific computing.html
 http://vvvvalvalval.github.io/archives.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -253,7 +277,7 @@ http://vvvvalvalval.github.io/archives.html
 http://vvvvalvalval.github.io/pages/about.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -261,7 +285,7 @@ http://vvvvalvalval.github.io/pages/about.html
 http://vvvvalvalval.github.io/Datomic.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -269,7 +293,7 @@ http://vvvvalvalval.github.io/Datomic.html
 http://vvvvalvalval.github.io/p/3.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 <url>
@@ -277,7 +301,7 @@ http://vvvvalvalval.github.io/p/3.html
 http://vvvvalvalval.github.io/p/2.html
 </loc>
 <lastmod>
-2019-12-06
+2019-12-19
 </lastmod>
 </url>
 </urlset>

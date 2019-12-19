@@ -12,11 +12,28 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Fri, 06 Dec 2019 16:42:42 +0100
+Thu, 19 Dec 2019 01:26:33 +0100
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html
+</link>
+<title>
+2 proofs in Information Theory: channel-convexity of Mutual Information
+</title>
+<description>
+
+</description>
+<pubDate>
+Wed, 18 Dec 2019 00:00:00 +0100
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/2019-12-03-inferring-earth-tilt-from-day-lengths.html
