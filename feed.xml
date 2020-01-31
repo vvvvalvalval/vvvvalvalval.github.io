@@ -12,11 +12,28 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Thu, 19 Dec 2019 01:26:33 +0100
+Fri, 31 Jan 2020 14:58:16 +0100
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/2020-01-31_how-covariances-behave-some-intuitive-views-on-normal-distributions-and-gaussian-processes.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/2020-01-31_how-covariances-behave-some-intuitive-views-on-normal-distributions-and-gaussian-processes.html
+</link>
+<title>
+How covariances behave: some intuitive views on normal distributions and Gaussian Processes
+</title>
+<description>
+
+</description>
+<pubDate>
+Fri, 31 Jan 2020 00:00:00 +0100
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html
