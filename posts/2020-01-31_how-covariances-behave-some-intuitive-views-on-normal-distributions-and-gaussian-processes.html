@@ -13197,7 +13197,7 @@ $$ \mu(x) := \mathbb{E}[T_x] $$$$ k(x, x') := \text{cov}(T_x, T_{x'}) = \mathbb{
 <p>To keep notation lightweight, it will be convenient to introduce the quantity:</p>
 $$ Z_x := T_x - \mu(x) $$<p>which is the 'difference from expected temperature'. Observe that the $(Z_x)_{x \in \mathcal{X}}$ are also jointly Gaussian, with the same covariances as the $(T_x)_{x \in \mathcal{X}}$, but mean zero. <strong>Whereas the $(T_x)_x$ are absolute temperatures, the $(Z_x)_{x}$ are relative ones.</strong></p>
 <p>In Machine Learning applications, we usually start from the kernel and mean functions: <strong>we choose mean and kernel functions $\mu$ and $k$, thus choosing a probabilistic model,</strong> and then use it to do inference from observations. What's more, $\mu$ and $k$ are usually defined with parameters, and part of the work consists of finding 'optimal' values of these parameters, or a posterior distribution for them, given training data. See <a href="#Appendix-B:-Gaussian-Processes-regression">Appendix B</a> for concrete details.</p>
-<h4 id="About-functions-and-spaces">About functions and spaces<a class="anchor-link" href="#About-functions-and-spaces">&#182;</a></h4><p>It bears repeating that the 'index set' $\mathcal{X}$ can be <em>any</em> set. In particular, <strong>any multivariate normal distribution over $\mathbb{R^n}$ <em>is</em> a Gaussian Process</strong>, one with a finite index set of size $n$.</p>
+<h4 id="About-functions-and-spaces">About functions and spaces<a class="anchor-link" href="#About-functions-and-spaces">&#182;</a></h4><p>It bears repeating that the 'index set' $\mathcal{X}$ can be <em>any</em> set. In particular, <strong>any multivariate normal distribution over $\mathbb{R^n}$ <em>is</em> a Gaussian Process</strong>, one with a finite discrete index set of size $n$.</p>
 <p>We're often accustomed to writing vectors and matrices with integer indexes, thinking of them as numerical arrays. I would like you to open your mind a bit, and <strong>think of vectors and matrices as functions of their indices.</strong> So the vector $[T_{x^{(1)}}, \dots, T_{x^{(n)}}]$ is really a function $x^{(i)} \mapsto T_{x^{(i)}}$, defined over the finite domain $\{x^{(1)}, ... x^{(n)}\}$.</p>
 <p>One final piece of advice: <strong><em>know your spaces!</em></strong> Our discussion will involve operations / navigation in various spaces:</p>
 <ul>
@@ -13720,8 +13720,8 @@ $$ k(t, t') = T_V^2 \exp{\left(-\frac{1}{2}\left[\left(\frac{1}{\pi }\frac{t_Y}{
 <p>The above examples suggest the idea that each index point $x \in \mathcal{X}$ has a kind of <strong>'sphere of influence'</strong> - a neighbouring region of points with significant covariance to $x$.</p>
 <p>As model parameters such as lengthscales vary, so does the volume emcompassed by such spheres of influence. If this volume becomes very small, all points of the dataset are modeled as independent. If it becomes very large, one sphere of influence is sufficient to cover all your dataset, and the temperature at one point determine it at all the others.</p>
 <p>You might then ask: "how many of these spheres of influence does it take to cover my dataset?". Vaguely speaking, the number of 'independent regions' in which you can partition your training points, which you might interpret as the number of <strong>'degrees of freedom'</strong> of your prior distribution, or the  number of <strong>'arbitrary decisions'</strong> which resulted in your training data, or the <strong>'entropy'</strong> of your distribution - all things you might relate to <strong><em>model complexity</em></strong>.</p>
-<p>This is something we can relate to the Bayesian notion of <em>evidence</em>. In the case of Gaussian Processes, assuming our observed data consists of the vector $\mathbf{T} = [T_{x^{(1)}}, \dots, T_{x^{(n)}}]$, the <em>evidence</em> for parameters value $\Theta$ is:</p>
-$$ \log(\text{ev}(\Theta)) := \log{\mathbb{P}(\mathbf{T} | \Theta)} = -\frac{1}{2}\mathbf{T}^\top\mathbf{K}_\Theta^{-1}\mathbf{T} -\frac{1}{2}\log{|2\pi . \mathbf{K}_\Theta|} $$<p>in which $\mathbf{K}_\Theta$ is the covariance matrix yielded by the kernel $k_\Theta$ on the observed points $(x^{(i)})_{i=1}^n$.</p>
+<p>This is something we can relate to the Bayesian notion of <em>evidence</em>. In the case of Gaussian Processes, assuming our observed data consists of the vector $\mathbf{Z} = [Z_{x^{(1)}}, \dots, Z_{x^{(n)}}]$, the <em>evidence</em> for parameters value $\Theta$ is:</p>
+$$ \log(\text{ev}(\Theta)) := \log{\mathbb{P}(\mathbf{Z} | \Theta)} = -\frac{1}{2}\mathbf{Z}^\top\mathbf{K}_\Theta^{-1}\mathbf{Z} -\frac{1}{2}\log{|2\pi . \mathbf{K}_\Theta|} $$<p>in which $\mathbf{K}_\Theta$ is the covariance matrix yielded by the kernel $k_\Theta$ on the observed points $(x^{(i)})_{i=1}^n$.</p>
 <p>The first term can be interpreted as a <em>data-fit</em> term, and the second term can be interpreted as a <em>complexity penalty</em> term. The principle of <strong>Occam's Razor</strong> tells us that we should strike a balance between data-fit and model complexity, and for a given data fit prefer models of low complexity.</p>
 
 </div>
@@ -13834,7 +13834,7 @@ $$ \mathbb{E}[\mathbf{T_*}] = \begin{bmatrix} \mu(x_*^{(1)}) \\ \vdots \\ \mu(x_
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <ul>
-<li>D. MacKay's <a href="http://www.inference.org.uk/mackay/itila/"><em>Information Theory, Inference, and Learning Algorithms</em></a> (2003) contains a good <a href="http://www.gaussianprocess.org/gpml/chapters/RW5.pdf">chapter on Gaussian Processes</a>, and in general is a very insightful resource about Bayesian methods for Machine Learning.</li>
+<li>D. MacKay's <a href="http://www.inference.org.uk/mackay/itila/"><em>Information Theory, Inference, and Learning Algorithms</em></a> (2003) contains a good <a href="http://www.inference.org.uk/mackay/itprnn/ps/534.548.pdf">chapter on Gaussian Processes</a>, and in general is a very insightful resource about Bayesian methods for Machine Learning.</li>
 <li>To go deeper, Williams and Rasmussen's <a href="http://www.gaussianprocess.org/gpml/"><em>Gaussian Processes for Machine Learning</em></a> (2006) is the classic text, for good reasons.</li>
 <li>Distill.pub contains an interactive <a href="https://distill.pub/2019/visual-exploration-gaussian-processes/">Visual Exploration of Gaussian Processes</a>.</li>
 </ul>
@@ -13872,7 +13872,6 @@ $$ \mathbb{E}[\mathbf{T_*}] = \begin{bmatrix} \mu(x_*^{(1)}) \\ \vdots \\ \mu(x_
     })();
   </script>
   
-
 
 
 </body>
