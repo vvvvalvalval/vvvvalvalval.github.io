@@ -13091,11 +13091,11 @@ div#notebook {
 <li>The second proof only uses information-theoretical arguments.</li>
 </ul>
 <p>The second proof is shorter, clearer, more insightful, and more self-contained. The first proof is the first one I delivered; it is longer and more technical.</p>
-<p>So why write about the first proof at all? Because I see a few advantages to it:</p>
+<p>So why write about the first proof at all? Because I see a few benefits to it:</p>
 <ol>
-<li>It serves as a cautionary tale against always rushing to analytical methods, instead of searching for an insightful perspective on the problem.</li>
-<li>From a pedagogical standpoint, it serves as an occasion to demonstrate how some classical tools from calculus and linear algebra can be used together.</li>
-<li>If you're anything like me, you've always dreamt of knowing what the Hessian of Mutual Information looks like. (Come on, admit it.)</li>
+<li>It serves as a <strong>cautionary tale</strong> against always rushing to analytical methods, instead of searching for an insightful perspective on the problem.</li>
+<li>From a pedagogical standpoint, it serves as an occasion to demonstrate how some <strong>classical tools from calculus and linear algebra</strong> can be used together.</li>
+<li>If you're anything like me, you've always dreamt of knowing what the <strong>Hessian of Mutual Information</strong> looks like. (Come on, admit it.)</li>
 </ol>
 
 </div>
@@ -13111,15 +13111,15 @@ div#notebook {
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Background">Background<a class="anchor-link" href="#Background">&#182;</a></h3><p>Given two finite sets $X$ and $Y$, a <strong>discrete memoryless channel</strong> is a specification of probability distributions $P(x | y)$, for $x \in X$ and $y \in Y$.</p>
+<h3 id="Background">Background<a class="anchor-link" href="#Background">&#182;</a></h3><p>Given two finite sets $X$ and $Y$, a <strong>discrete memoryless channel</strong> is a specification of probability distributions $P(y | x)$, for $x \in X$ and $y \in Y$.</p>
 <p>Informally, this notion is motivated as follows: a <em>sender</em> chooses a message $x \in X$ to send, which after going through the communication channel will result in a <em>receiver</em> receiving some $y \in Y$. In an ideal world, we would be certain of what $y$ would be received after sending $x$ (in other words, y would be a <em>function</em> of $x$); but unfortunately, the channel adds random <em>noise</em> to the signal, such that after having chosen to send $x$, we only know the <em>probability distribution</em> $P(y | x)$ of what might be received.</p>
 <p>Because the channel consists of $|X|$ probability distributions over a set of $Y$ elements, the channel can be represented by an $|Y| \times |X|$ <strong>transition matrix</strong> $Q$:</p>
 $$ Q_{yx} := P(y | x) $$<p>Therefore, each cell of $Q$ contains a values between 0 and 1, and the columns of Q sum to 1.</p>
-<p>If we assume of probability distribution $P_X$ over X, a channel $Q$ gives us a probability distribution $P_Y$ of $Y$, by $P(y) = \sum_{x}{P(y | x)P(x)}$. Representing $P_X$ and $P_Y$ as vectors, this relation can be written as a matrix multiplication:</p>
+<p>If we assume of probability distribution $P_X$ over $X$, a channel $Q$ gives us a probability distribution $P_Y$ of $Y$, by $P(y) = \sum_{x}{P(y | x)P(x)}$. Representing $P_X$ and $P_Y$ as vectors, this relation can be written as a matrix multiplication:</p>
 $$ P_Y = Q P_X $$<p>The <strong>mutual information</strong> $I[X;Y]$ between $X$ and $Y$ represents the average amount of information about $X$ that is gained by learning $Y$; phrased differently, it is the amount of <em>uncertainty</em> (<strong>entropy</strong>) about $X$ that goes away by learning $Y$. Formally:</p>
 $$ I[X;Y] = H[X] - H[X | Y] = H[Y] - H[Y | X] $$<p>In the above formula, $H[X]$ is the <strong>entropy</strong> of random variable $X$, and $H[X | Y]$ is the <strong>conditional entropy</strong> of $X$ given $Y$:</p>
 $$ H[Y] = \sum_{y}{P(y) \log(\frac{1}{P(y)})} $$$$ H[Y | X] = \sum_{x}{P(x) H[Y | X = x]} = \sum_{x}{P(x) \sum_{y}{P(y | x) \log(\frac{1}{P(y | x)})} } $$<h3 id="What-we-want-to-prove">What we want to prove<a class="anchor-link" href="#What-we-want-to-prove">&#182;</a></h3><p>The result we want to prove is the following:</p>
-<blockquote><p>Given a probability distribution over X, the function $I: Q \mapsto I[X;Y]$ is convex.</p>
+<blockquote><p>Given a probability distribution over $X$, the function $I: Q \mapsto I[X;Y]$ is convex.</p>
 </blockquote>
 <p>In details, this means that given 2 channels $Q^{(0)}$ and $Q^{(1)}$, and a weight $\lambda \in [0,1]$, we can define a 'mixed' channel $Q^{(\lambda)} := \lambda Q^{(0)} + (1 - \lambda)Q^{(1)}$, with the property that $I(Q^{(\lambda)}) \leq \lambda I(Q^{(0)}) + (1 - \lambda)I(Q^{(1)})$</p>
 <h3 id="Intuitive-interpretation">Intuitive interpretation<a class="anchor-link" href="#Intuitive-interpretation">&#182;</a></h3><p>With regards to the capacity of conveying information, mixing 2 channels is always worse than using the most informative of the 2 channels we started with.</p>
@@ -13138,9 +13138,9 @@ $$ H[Y] = \sum_{y}{P(y) \log(\frac{1}{P(y)})} $$$$ H[Y | X] = \sum_{x}{P(x) H[Y
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>A common approach to proving that a function is convex is to differentiate it twice, yielding a Hessian matrix, and to prove that this Hessian is positive semidefinite.</p>
+<p>A common approach to proving that a function is convex is to differentiate it twice, yielding a Hessian matrix, and to prove that this Hessian is positive semidefinite. That's what we'll set out to do here.</p>
 <h3 id="Computing-the-Hessian">Computing the Hessian<a class="anchor-link" href="#Computing-the-Hessian">&#182;</a></h3><p>$I(Q)$ can be viewed as a function of $|X| \times |Y|$ variables, therefore our Hessian will be a square matrix containing $(|X||Y|)^2$ entries, of the form $\frac{\partial^2I}{\partial Q_{yx} \partial Q_{vu}}$.</p>
-<p>To make calculations lightweight, we'll use some <strong>shorthand notation:</strong></p>
+<p>To make calculations more lightweight, we'll use some <strong>shorthand notation:</strong></p>
 $$ \pi_x := P(x) $$$$ \rho_y = \rho_y(Q) := P(y) $$<p>Recall that $\rho = Q \pi$, which can be reformulated to:</p>
 $$ \rho_y = \sum_{x}{Q_{yx} \pi_x} $$<p>As a result:</p>
 $$ \frac{\partial \rho_y}{\partial Q_{vu}} = \delta_{v = y} \pi_u $$<p>We now differentiate $H[Y]$ and $H[Y | X]$ with respect to $Q_{uv}$:</p>
@@ -13150,17 +13150,17 @@ $$ H_{(yx)(vu)} = \frac{\partial^2 I(Q)}{\partial Q_{yx} \partial Q_{vu}} = \del
 <p>Denoting $\Delta := \text{diag}((\frac{\pi_x}{Q_{yx}})_{x \in X})$, we can write:</p>
 $$ B^{(y)} = \Delta - \frac{1}{\rho_y}\pi\pi^\top $$<p>We now prove that $B^{(y)}$ is positive semi-definite. Let $\epsilon$ a vector; we want to prove $\epsilon^\top B^{(y)} \epsilon \geq 0$.</p>
 $$ \epsilon^\top B^{(y)} \epsilon = \epsilon^\top \Delta \epsilon - \frac{1}{\rho_y} (\pi^\top \epsilon)^2$$<p>Therefore, our goal becomes to prove:</p>
-$$ \epsilon^\top \Delta \epsilon  \geq  \frac{1}{\rho_y} (\pi^\top \epsilon)^2 $$$$ \Uparrow $$$$ (\pi^\top \epsilon)^2 \leq \rho_y (\epsilon^\top \Delta \epsilon)$$$$ \Uparrow $$$$ \big(\sum_{x}{\pi_x \epsilon_x}\big)^2  \leq  \big(\sum_{x}{Q_{yx} \pi_x}\big) \big(\sum_{x}{\frac{\pi_x}{Q_{xy}} \epsilon_x^2}\big) $$<p>So we want to compare a squared sum of products to a product of two sums... this looks like a job for the good old <strong><a href="https://en.wikipedia.org/wiki/Cauchy%E2%80%93Schwarz_inequality">Cauchy-Schwartz inequality</a></strong>! And indeed, observing that $\pi_x \epsilon_x = (\sqrt{Q_{yx} \pi_x})\big(\sqrt{\frac{\pi_x}{Q_{xy}}} \epsilon_x \big)$, it is easily verified that the Cauchy-Schwartz inequality yields the desired result.</p>
+$$ \epsilon^\top \Delta \epsilon  \geq  \frac{1}{\rho_y} (\pi^\top \epsilon)^2 $$$$ \Uparrow $$$$ (\pi^\top \epsilon)^2 \leq \rho_y (\epsilon^\top \Delta \epsilon)$$$$ \Uparrow $$$$ \big(\sum_{x}{\pi_x \epsilon_x}\big)^2  \leq  \big(\sum_{x}{Q_{yx} \pi_x}\big) \big(\sum_{x}{\frac{\pi_x}{Q_{yx}} \epsilon_x^2}\big) $$<p>So we want to compare a squared sum of products to a product of two sums... this looks like a job for the good old <strong><a href="https://en.wikipedia.org/wiki/Cauchy%E2%80%93Schwarz_inequality">Cauchy-Schwartz inequality</a></strong>! And indeed, observing that $\pi_x \epsilon_x = (\sqrt{Q_{yx} \pi_x})\big(\sqrt{\frac{\pi_x}{Q_{yx}}} \epsilon_x \big)$, it is easily verified that the Cauchy-Schwartz inequality yields the desired result.</p>
 <h3 id="Some-justifications-regarding-domains-of-validity">Some justifications regarding domains of validity<a class="anchor-link" href="#Some-justifications-regarding-domains-of-validity">&#182;</a></h3><p>Looking at the above derivation, you may want to object as to the validity of certain derivations. I'll try to make the required justifications here:</p>
-<blockquote><p><strong>You treated I(Q) as a function of $|X||Y|$ unconstrained variables, whereas it's really defined on an $|X|(|Y| - 1)$-dimensional polytope, because of the constraints on the columns sums.</strong></p>
+<blockquote><p><strong>You treated $I(Q)$ as a function of $|X||Y|$ unconstrained variables, whereas it's really defined on an $|X|(|Y| - 1)$-dimensional polytope, because of the constraints on the columns sums.</strong></p>
 </blockquote>
-<p>True, but it doesn't hurt to extend the domain of definition of $I(Q)$ - if the extended function is convex, so is its restriction to values of Q that are truly channels.</p>
+<p>True, but it doesn't hurt to extend the domain of definition of $I(Q)$ - if the extended function is convex, so is its restriction to values of $Q$ that are truly channels.</p>
 <blockquote><p><strong>To differentiate, you have assumed that $Q_{yx}$ is non-zero.</strong></p>
 </blockquote>
 <p>Indeed; we prove the convexity of $I$ to the (dense, open and convex) subset of $Q$s where that's true, and can then conclude $I$ is convex on its entire domain using a continuity argument.</p>
 <blockquote><p><strong>To differentiate, you have assumed that $\rho_y$ is non-zero.</strong></p>
 </blockquote>
-<p>True; however, observe that this assumption is valid assuming that all $Q_{yx}$ are non-zero.</p>
+<p>True; however, observe that this assumption is valid provided that all $Q_{yx}$ are non-zero.</p>
 
 </div>
 </div>
@@ -13208,7 +13208,7 @@ $$ P(y | x) = P(y, z=0 | x) + P(y, z=0 | x) = P(z=0)P(y|x, z=0) + P(z=1)P(y|x, z
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>We can now derive the proof by starting with an incredibly intuitive argument: <strong>knowing $y$ <em>and</em> $z$ gives us more information about $x$ than knowing $y$ alone.</strong> Formally:</p>
+<p>We can now derive the proof by starting with an incredibly intuitive argument: <strong>knowing both $y$ <em>and</em> $z$ gives us more information on $x$ than knowing $y$ alone.</strong> Formally:</p>
 $$ H[X | Y, Z] \leq H[X | Y] $$$$ \Downarrow $$$$ P(z = 0)H[X | Y, z = 0] + P(z = 1)H[X | Y, z = 1] \leq H[X | Y] $$$$ \Downarrow $$$$ (1 - \lambda)H[X | Y](Q^{(0)}) + \lambda H[X | Y](Q^{(1)}) \leq H[X | Y](Q^{(\lambda)}) $$$$ \Downarrow $$$$ (1 - \lambda)(H[X] - H[X | Y](Q^{(0)})) + \lambda (H[X] - H[X | Y](Q^{(1)})) \geq (H[X] - H[X | Y](Q^{(\lambda)})) $$$$ \Downarrow $$$$ (1 - \lambda)I[X ; Y](Q^{(0)}) + \lambda I[X ; Y](Q^{(1)}) \geq I[X ; Y](Q^{(\lambda)}) $$<p>The last line expresses the convexity of $I(Q)$. QED.</p>
 
 </div>

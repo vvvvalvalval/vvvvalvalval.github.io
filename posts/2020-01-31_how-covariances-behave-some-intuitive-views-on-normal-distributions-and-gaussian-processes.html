@@ -13085,7 +13085,7 @@ div#notebook {
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>The goal of this post is to complement the classical material on Gaussian Processes and distributions, illustrating them with basic observations that speak to logical or geometric intuition.</p>
-<p>I've found that most introductions to Gaussian Processes start from an abstract definition, then quickly dive into matrix computations or high-level maths. Such topics are important and interesting, but may leave the newcomer without a tangible understanding of how Gaussian Processes behave. This post aims to address that need; that said, it does assume some basic mathematical background, especially in linear algebra and probability.</p>
+<p>I've found that most introductions to Gaussian Processes start from an abstract definition, then quickly dive into matrix computations or high-level math. Such topics are important and interesting, but may leave the newcomer without a tangible understanding of how Gaussian Processes behave. This post aims to address that need; that said, it does assume some basic mathematical background, especially in linear algebra and probability.</p>
 <p>This post is <em>not</em> an introduction to Gaussian Processes, rather a complement to such introductions. For good introductions, I'd recommend to start with <a href="http://www.inference.org.uk/mackay/itprnn/ps/534.548.pdf">chapter 45 of MacKay's ITILA</a>, then the first chapters of the <a href="http://www.gaussianprocess.org/gpml/chapters/">GPML book by Rasmussen and Williams</a>.</p>
 
 </div>
@@ -13171,7 +13171,7 @@ div#notebook {
 <li>$Z_x := (T_x - \mu(x))$, the difference from the mean. Like $T_x$ but with zero mean.</li>
 <li>$k: (x, x') \mapsto k(x, x') = \mathbb{E}[Z_x Z_{x'}]$, the <strong>covariance function</strong> or <strong>kernel function</strong> associated with $(T_x)_x$.</li>
 <li>$\Theta$: <strong>parameters</strong> of the functions $k$ and $\mu$. Often consists of characteristic <strong>lengthscales</strong> $l_i$ and <strong>output scales</strong> $T_V$.</li>
-<li>$\{x^{(1)}, \dots, x^{(n)}\} \subset \mathcal{X}$: a subset of the index points of particular interest, corresponding for example to our training dataset our test points.</li>
+<li>$\{x^{(1)}, \dots, x^{(n)}\} \subset \mathcal{X}$: a subset of the index points of particular interest, corresponding for example to our training dataset or to our test points.</li>
 <li>$\mathbf{K} := [k(x^{(i)}, x^{(j)})]_{ij}$, the <strong>covariance matrix</strong> obtained from applying kernel $k$ to points $\{x^{(1)}, \dots, x^{(n)}\}$.</li>
 </ul>
 
@@ -13191,21 +13191,21 @@ div#notebook {
 <h4 id="Definition">Definition<a class="anchor-link" href="#Definition">&#182;</a></h4><p>As you can read in many places, a <em>Gaussian Process</em> is a family $(T_x)_{x \in \mathcal{X}}$ of real-valued random variables, such that for any subset $\{x^{(1)}, \dots, x^{(n)}\}$ of $\mathcal{X}$, the random variables $T_{x^{(1)}}, \dots, T_{x^{(n)}}$ are jointly Gaussian, i.e the random vector $[T_{x^{(1)}}, \dots, T_{x^{(n)}}]$ follows a <strong>multivariate normal distribution.</strong></p>
 <p>Here $\mathcal{X}$ is called the <em>index set</em> of the GP, and can really be just any set (its element could be points in time, geographic coordinates, text strings, ...).</p>
 <h4 id="Illustration-with-physical-quantities">Illustration with physical quantities<a class="anchor-link" href="#Illustration-with-physical-quantities">&#182;</a></h4><p>In order to prevent confusion, it can be helpful to reason with physical dimensions. Throughout this article, <strong>all $T_x$ values are assumed to be temperatures (in Kelvins °K).</strong></p>
-<h4 id="Probabilities-of-functions">Probabilities of functions<a class="anchor-link" href="#Probabilities-of-functions">&#182;</a></h4><p>A well-known and insightful viewpoint is that <strong>a Gaussian Process defines a probability distributions over the space of functions from $\mathcal{X}$ to $\mathbb{R}$</strong>. From that perspective, $T_x$ is not a random number; it's the evaluation of a random <em>function</em> at a given point $x \in \mathcal{X}$; you could write it $T(x)$ rather than $T_x$, and treat $T$ as the random variable.</p>
+<h4 id="Probabilities-of-functions">Probabilities of functions<a class="anchor-link" href="#Probabilities-of-functions">&#182;</a></h4><p>A well-known and insightful viewpoint is that <strong>a Gaussian Process defines a probability distribution over the space of functions from $\mathcal{X}$ to $\mathbb{R}$</strong>. From that perspective, $T_x$ is not a random number; it's the evaluation of a random <em>function</em> at a given point $x \in \mathcal{X}$; you could write it $T(x)$ rather than $T_x$, and treat $T$ as the random variable.</p>
 <p>Because the $(T_x)_x$ are jointly Gaussian, <strong>their means and covariances induce deterministic functions</strong> defined on $\mathcal{X}:$</p>
 $$ \mu(x) := \mathbb{E}[T_x] $$$$ k(x, x') := \text{cov}(T_x, T_{x'}) = \mathbb{E}[(T_x - \mu(x))(T_{x'} - \mu(x'))] $$<p>$\mu : \mathcal{X} \to \mathbb{R}$ is called the <strong><em>mean function</em></strong>, and $k : \mathcal{X}\times\mathcal{X}  \to \mathbb{R}$ is called the <strong><em>covariance function</em></strong> or <strong><em>kernel</em></strong>. The function-space probability distribution is fully determined by these 2 functions.</p>
 <p>To keep notation lightweight, it will be convenient to introduce the quantity:</p>
 $$ Z_x := T_x - \mu(x) $$<p>which is the 'difference from expected temperature'. Observe that the $(Z_x)_{x \in \mathcal{X}}$ are also jointly Gaussian, with the same covariances as the $(T_x)_{x \in \mathcal{X}}$, but mean zero. <strong>Whereas the $(T_x)_x$ are absolute temperatures, the $(Z_x)_{x}$ are relative ones.</strong></p>
 <p>In Machine Learning applications, we usually start from the kernel and mean functions: <strong>we choose mean and kernel functions $\mu$ and $k$, thus choosing a probabilistic model,</strong> and then use it to do inference from observations. What's more, $\mu$ and $k$ are usually defined with parameters, and part of the work consists of finding 'optimal' values of these parameters, or a posterior distribution for them, given training data. See <a href="#Appendix-B:-Gaussian-Processes-regression">Appendix B</a> for concrete details.</p>
 <h4 id="About-functions-and-spaces">About functions and spaces<a class="anchor-link" href="#About-functions-and-spaces">&#182;</a></h4><p>It bears repeating that the 'index set' $\mathcal{X}$ can be <em>any</em> set. In particular, <strong>any multivariate normal distribution over $\mathbb{R^n}$ <em>is</em> a Gaussian Process</strong>, one with a finite discrete index set of size $n$.</p>
-<p>We're often accustomed to writing vectors and matrices with integer indexes, thinking of them as numerical arrays. I would like you to open your mind a bit, and <strong>think of vectors and matrices as functions of their indices.</strong> So the vector $[T_{x^{(1)}}, \dots, T_{x^{(n)}}]$ is really a function $x^{(i)} \mapsto T_{x^{(i)}}$, defined over the finite domain $\{x^{(1)}, ... x^{(n)}\}$.</p>
+<p>We're often accustomed to writing vectors and matrices with integer indexes, thinking of them as numerical arrays. I would like you to open your mind a bit, and <strong>think of vectors and matrices as real-valued functions of their indices.</strong> So the vector $[T_{x^{(1)}}, \dots, T_{x^{(n)}}]$ is really a function $x^{(i)} \mapsto T_{x^{(i)}}$, defined over the finite domain $\{x^{(1)}, ... x^{(n)}\}$.</p>
 <p>One final piece of advice: <strong><em>know your spaces!</em></strong> Our discussion will involve operations / navigation in various spaces:</p>
 <ul>
 <li>the index set $\mathcal{X}$, and its representations</li>
 <li>the 'values' space $\mathbb{R}$, </li>
 <li>the infinite-dimensional affine space of functions $x \mapsto T_x$, </li>
 <li>the infinite-dimensional vector space of functions $x \mapsto Z_x$,</li>
-<li>the finite-dimensional subspaces of the above 2 obtained by considering a finite subset of datapoints ${x^{(1)}, \dots, x^{(n)}}$</li>
+<li>the finite-dimensional projections of the above 2 obtained by considering a finite subset of datapoints ${x^{(1)}, \dots, x^{(n)}}$</li>
 <li>the space of kernel parameters</li>
 </ul>
 <p>When we talk about linear transformations / geometric representations / etc. it's important to keep track of what spaces we are operating in.</p>
@@ -13348,7 +13348,7 @@ $$ \mathbf{K} = \sum_{i = 1}^{d} T_i^2 . \mathbf{f}^{(i)}\mathbf{f}^{(i) \top} $
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
 <p>Gaussian distributions have the property that two jointly Gaussian variables $T_x$ and $T_{x'}$ are independent if and only if $\text{cov}(T_x, T_{x'}) = 0$.</p>
-<p>As a consequence, <strong>the independence of a list of Gaussian jointly variables corresponds to their covariance matrix being diagonal.</strong></p>
+<p>As a consequence, <strong>the independence of a list of jointly Gaussian variables corresponds to their covariance matrix being diagonal.</strong></p>
 <p>For Gaussian Processes inference, a kernel that yields only diagonal covariance matrices would not be very useful, because training points would tell you nothing about test points. Having said that, noise is usually modeled by a diagonal matrix being added to the covariance matrix of the training data, the assumption being that noise consists of small independent Gaussian perturbations at all data points.</p>
 
 </div>
@@ -13497,7 +13497,7 @@ $$ k_{(T_V, l)}(x, x') := T_V^2 \exp \left(- \frac{1}{2} \left(\frac{x - x'}{l}\
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>We see here that <strong>$l$ yields a typical 'distance of variability' in $\mathcal{X}$-space.</strong> For instance, it can be seen that $l$ is proportional to the expected distance between 0-crossings of a sampled function.</p>
+<p>We see here that <strong>$l$ yields a typical 'distance of variability' in $\mathcal{X}$-space.</strong> For instance, it can be proved that $l$ is proportional to the expected distance between 0-crossings of a sampled function.</p>
 <p>A probabilistic argument similar to the above can be made: if $f: [x_0, x_1] \to \mathbb{R}$ is a 'typical' function for a kernel with lengthscale $l$, then $f_\alpha : [\alpha x_0, \alpha x_1] \to \mathbb{R}$ defined by $f_\alpha(x) := f(\alpha x)$ is a typical function for the same kernel with lengthscale modified to $\alpha l$.</p>
 
 </div>
@@ -13600,7 +13600,7 @@ $$ d_{\Theta}(x, x')^2 := \sum_{i=1}^{D}{\left( \frac{x_i - x'_i}{l_i} \right)^2
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<h3 id="Lengthscales,-features-mapping,-and-geometry">Lengthscales, features mapping, and geometry<a class="anchor-link" href="#Lengthscales,-features-mapping,-and-geometry">&#182;</a></h3><p>Another way to look at lengthscale is to view them as acting on the features rather than on the distance: a given choice of lengthscales $(l_i)_{i=1}^D$ transforms each feature vector $x = [x_1, \dots, x_D]$ into a dimension-less vector $u := [\frac{x_1}{l_1}, \dots, \frac{x_1}{l_D}]$ of $\mathbb{R}^D$; the distance that is applied to these vectors is then the usual isotropic Euclidean distance:</p>
+<h3 id="Lengthscales,-features-mapping,-and-geometry">Lengthscales, features mapping, and geometry<a class="anchor-link" href="#Lengthscales,-features-mapping,-and-geometry">&#182;</a></h3><p>Another way to look at lengthscales is to view them as acting on the features rather than on the distance: a given choice of lengthscales $(l_i)_{i=1}^D$ transforms each feature vector $x = [x_1, \dots, x_D]$ into a dimension-less vector $u := [\frac{x_1}{l_1}, \dots, \frac{x_1}{l_D}]$ of $\mathbb{R}^D$; the distance that is applied to these vectors is then the usual isotropic Euclidean distance:</p>
 $$ d(u, u')^2 = \sum_{i=1}^D{(u_i - u'_i)^2} $$<p><strong>Changing the lengthscales then changes how the $u$ data points are 'stretched' in $\mathbb{R}^D$:</strong> decreasing $l_i$ strechtes the point further apart along the corresponding dimension, whereas driving $l_i$ to infinity 'collapses' the points onto the $u_i = 0$ hyperplane. Let's visualize an example with 2 features:</p>
 
 </div>
@@ -13659,11 +13659,11 @@ $$ d(u, u')^2 = \sum_{i=1}^D{(u_i - u'_i)^2} $$<p><strong>Changing the lengthsca
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>Here we illustrate on an example how geometrical thinking can help understanding kernels.</p>
-<p>Imagine we're modeling a time series $(T_t)_t$ that exhibits a short-term near-periodic trend, and a long-term non-periodic trend. For instance, the month-averaged temperature in Paris has a 1 year periodic trend of the short term (because seasons), and a long-term non-periodic trend (because global warming) :</p>
+<p>Here we illustrate on an example how geometrical thinking can help understand kernels.</p>
+<p>Imagine we're modeling a time series $(T_t)_t$ that exhibits a short-term near-periodic trend, and a long-term non-periodic trend. For instance, the month-averaged temperature in Paris has a 1 year periodic trend on the short term (because seasons), and a long-term non-periodic trend (because global warming) :</p>
 <p><img src="../img/paris-avg-temp-2009-2019.svg" alt=""></p>
 <p>We can model this as a Gaussian Process using the following kernel:</p>
-$$ k(t, t') = T_V^2 \exp{\left(-\frac{1}{2}\left[\left(\frac{1}{\pi }\frac{t_Y}{t_P}\sin\left(\pi \frac{t - t'}{t_Y}\right)\right)^2 + \left(\frac{t - t'}{t_L}\right)^2 \right]\right)} $$<p>in which $t_Y = \text{1 year}$, $t_L$ is a chracteristic timescale corresponding to the long-term trend, and $t_P$ is a characteristic timescale corresponding to the periodic trend. The parameters that you'd want to adjust are $t_P, t_L$ and $T_V$. Reasonable setting would be $t_P \ll t_Y \lt t_L$.</p>
+$$ k(t, t') = T_V^2 \exp{\left(-\frac{1}{2}\left[\left(\frac{1}{\pi }\frac{t_Y}{t_P}\sin\left(\pi \frac{t - t'}{t_Y}\right)\right)^2 + \left(\frac{t - t'}{t_L}\right)^2 \right]\right)} $$<p>in which $t_Y = \text{1 year}$, $t_L$ is a characteristic timescale corresponding to the long-term trend, and $t_P$ is a characteristic timescale corresponding to the periodic trend. The parameters that you'd want to adjust are $t_P, t_L$ and $T_V$. Reasonable settings would be $t_P \ll t_Y \lt t_L$.</p>
 <p>Inside the brackets, the first term $\left(\frac{1}{\pi }\frac{t_Y}{t_P}\sin\left(\pi \frac{t - t'}{t_Y}\right)\right)^2$ corresponds to a 'periodic' time gap (by which $t$ and $t'$ are 'close' if they are approximately the same time of the year), whereas the second term $\left(\frac{t - t'}{t_L}\right)^2$ corresponds to an ordinary time gap.</p>
 <p>The periodic term can be understood as follows: project each time $t$ to the unit circle at $c(t) := \left[\cos\left(2 \pi \frac{t}{t_Y}\right), \sin\left(2 \pi \frac{t}{t_Y}\right)\right]$, then compute the euclidean squared distance $\frac{1}{\theta_P^2}\lVert c(t) - c(t') \rVert^2$, in which $\theta_P$ is a characteristic 'angular' scale to be compared to the 'full revolution' $2 \pi$; because timescales are more intuitive than angular scales, we then introduce $t_P := \frac{\theta_P}{2\pi}t_Y$, and after some trigonometric manipulations we obtain the formula given above. So <strong>in effect, when computing the 'periodic distance', we're just computing ordinary euclidean distance, but after having projected the timeline to the unit circle.</strong></p>
 <p>Just as the periodic term corresponds to projecting the timeline onto a circle, it can be seen <strong>the entire 'distance' expression inside the brackets corresponds to projecting the timeline onto a spiral, that 'wraps around' a cylinder in 3D space:</strong></p>
@@ -13722,7 +13722,7 @@ $$ k(t, t') = T_V^2 \exp{\left(-\frac{1}{2}\left[\left(\frac{1}{\pi }\frac{t_Y}{
 <p>You might then ask: "how many of these spheres of influence does it take to cover my dataset?". Vaguely speaking, the number of 'independent regions' in which you can partition your training points, which you might interpret as the number of <strong>'degrees of freedom'</strong> of your prior distribution, or the  number of <strong>'arbitrary decisions'</strong> which resulted in your training data, or the <strong>'entropy'</strong> of your distribution - all things you might relate to <strong><em>model complexity</em></strong>.</p>
 <p>This is something we can relate to the Bayesian notion of <em>evidence</em>. In the case of Gaussian Processes, assuming our observed data consists of the vector $\mathbf{Z} = [Z_{x^{(1)}}, \dots, Z_{x^{(n)}}]$, the <em>evidence</em> for parameters value $\Theta$ is:</p>
 $$ \log(\text{ev}(\Theta)) := \log{\mathbb{P}(\mathbf{Z} | \Theta)} = -\frac{1}{2}\mathbf{Z}^\top\mathbf{K}_\Theta^{-1}\mathbf{Z} -\frac{1}{2}\log{|2\pi . \mathbf{K}_\Theta|} $$<p>in which $\mathbf{K}_\Theta$ is the covariance matrix yielded by the kernel $k_\Theta$ on the observed points $(x^{(i)})_{i=1}^n$.</p>
-<p>The first term can be interpreted as a <em>data-fit</em> term, and the second term can be interpreted as a <em>complexity penalty</em> term. The principle of <strong>Occam's Razor</strong> tells us that we should strike a balance between data-fit and model complexity, and for a given data fit prefer models of low complexity.</p>
+<p>The first term can be interpreted as a <em>data-fit</em> term, and the second term can be interpreted as a <em>complexity penalty</em> term. The principle of <strong>Occam's Razor</strong> tells us that we should strike a balance between data-fit and model complexity, and for a given data-fit prefer models of low complexity.</p>
 
 </div>
 </div>
@@ -13793,7 +13793,6 @@ $$ \mathbb{P}(x) = K_{S} \exp\left(-\frac{1}{2}(x - \mu)^\top S^{-1} (x - \mu) \
 <p>This definition is restrictive, in the sense that we require that the matrix $S$ be invertible, i.e definite. It's interesting to generalize this definition to the semidefinite-positive case, as it will provide insightful behaviours at the limit of the degenerate case.</p>
 <p>To do that, we need a bit of linear algebra background. A symmetric matrix, being diagonizable, stabilizes its column space (a.k.a the 'image' of the matrix), and restricted to its column space, is invertible (for $b \in \text{colsp}(S)$, the equation $Sx = b$ has a unique solution $x \in \text{colsp}(S)$).</p>
 <p>Then we can define a normal distribution from $S$ by saying that all of the probability mass is on its column space (1), and that restricted to its column space, the probability density is of the above form. This leads us to:</p>
-<p><em>(1) Strictly speaking, the probability mass is on $\mu + \text{colsp}(S)$, which is an affine subspace of $\mathbb{R}^n$.</em></p>
 <hr>
 <h3 id="Multivariate-normal-distribution:-general-definition">Multivariate normal distribution: general definition<a class="anchor-link" href="#Multivariate-normal-distribution:-general-definition">&#182;</a></h3><p>A <strong>multivariate normal distribution</strong> is a probability distribution $\mathbb{P}$ over $\mathbb{R}^n$, such that:</p>
 <ul>
@@ -13801,8 +13800,9 @@ $$ \mathbb{P}(x) = K_{S} \exp\left(-\frac{1}{2}(x - \mu)^\top S^{-1} (x - \mu) \
 <li>the restriction of $\mathbb{P}$ to $\mathcal{E}$ is a non-degenerate normal distribution.</li>
 </ul>
 <hr>
-<p>So <strong>for example, a degenerate 3D normal distribution could concentrate all of the probability mass on a 2D plane, or a 1D line, or even on a single point</strong> (in which case there is no uncertainty).</p>
+<p>So <strong>for example, a degenerate 3D normal distribution could concentrate all of the probability mass on a 2D plane, or a 1D line, or even on a single point</strong> (in this last case there is no uncertainty).</p>
 <p>Note that <strong>the mean and covariance matrix are still defined for a degenerate normal distribution</strong>, by $\mu = \mathbb{E}[x]$ and $S = \mathbb{E}[xx^\top]$. It's just that we can no longer write a probability density $\mathbb{P}(x)$ based on them.</p>
+<p><em>(1) Strictly speaking, the probability mass is on $\mu + \text{colsp}(S)$, which is an affine subspace of $\mathbb{R}^n$.</em></p>
 
 </div>
 </div>
@@ -13852,7 +13852,7 @@ $$ \mathbb{E}[\mathbf{T_*}] = \begin{bmatrix} \mu(x_*^{(1)}) \\ \vdots \\ \mu(x_
 <div class="cell border-box-sizing text_cell rendered"><div class="prompt input_prompt">
 </div><div class="inner_cell">
 <div class="text_cell_render border-box-sizing rendered_html">
-<p>I hope you found this article insightful, and will help you go deeper. Experts might object that the remarks made here are obvious; that may well be true, but when studying any mathematical concept, stating the obvious is where everyone should start.</p>
+<p>I hope you found this article insightful, and will help you dive deeper. Experts might object that the remarks made here are obvious; that may well be true, but when studying any mathematical concept, stating the obvious is where everyone should start.</p>
 <p>Feel free to suggest improvements.</p>
 
 </div>
@@ -13872,8 +13872,6 @@ $$ \mathbb{E}[\mathbf{T_*}] = \begin{bmatrix} \mu(x_*^{(1)}) \\ \vdots \\ \mu(x_
     })();
   </script>
   
-
-
 </body>
 
  
