@@ -12,11 +12,28 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Wed, 29 Apr 2020 20:31:22 +0200
+Fri, 15 May 2020 17:29:23 +0200
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/2020-05-15_Using-Decision-Trees-for-charting-pathological-datasets.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/2020-05-15_Using-Decision-Trees-for-charting-pathological-datasets.html
+</link>
+<title>
+Using Decision Trees for charting pathological datasets
+</title>
+<description>
+
+</description>
+<pubDate>
+Fri, 15 May 2020 00:00:00 +0200
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/2020-01-31_how-covariances-behave-some-intuitive-views-on-normal-distributions-and-gaussian-processes.html
