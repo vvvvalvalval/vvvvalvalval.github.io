@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Clojure&#39;s keyword namespacing convention Considered Harmful</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">June 26, 2020</div>
+        
+    </div>
+    <h2>Clojure&#39;s keyword namespacing convention Considered Harmful</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#the_great_benefits_of_namespaced_keys">The great benefits of namespaced keys</a></li><li><a href="#advantages_of_&apos;snake_case&apos;:_portability_and_ubiquity">Advantages of 'snake case': portability and ubiquity</a></li><li><a href="#frequent_objections">Frequent objections</a></li><ol><li><a href="#">"This is not idiomatic Clojure"</a></li><li><a href="#">"The lisp-case convention lets me destructure keywords"</a></li><li><a href="#">"But clojure.spec encourages the use of Clojure-namespaced keywords!"</a></li><li><a href="#">"This will create inconsistencies in our code style"</a></li><li><a href="#">"But I can just write a key-translation layer at the edge of my Clojure program..."</a></li></ol><li><a href="#why_have_we_used_lisp-case_in_clojure,_anyway?">Why have we used lisp-case in Clojure, anyway?</a></li><li><a href="#conclusion">Conclusion</a></li></ol>
+    <p>Thank you for taking the bait of this inflammatory title. I promise you that the rest of the article will be more reasoned and nuanced, even though the issue at hand is definitely pedestrian and annoying.</p><p><strong><i>In summary:</i></strong> for far-ranging data attributes, such as database columns and API fields, <strong>I recommend namespacing keys using 'snake case', contrary to the current Clojure convention of using 'lisp-case' (for example: favour <code>:myapp&#95;user&#95;first&#95;name</code> over <code>:myapp.user/first-name</code>)</strong>, because the portability benefits of the former notation outweigh whatever affordances Clojure provides for the latter. This is an instance of trading local conveniences for system-wide benefits.</p><p>You may already be convinced at this point, in which case the rest of this article will be of little value to you. Otherwise, I want to provoke you to go through the following mental process:</p><ol><li><strong>Consider <code>:namespacing&#95;keys&#95;in&#95;snake&#95;case</code> for data attributes</strong> in Clojure, rather than the conventional <code>:namespacing.keys/in-lisp-case</code>.</li><li><strong>Get angry</strong>, because that's disgusting to any self-respecting Clojure-bred programmer.</li><li>Recognize that you're angry because you've got <strong>attached to an arbitrary convention,</strong> and superficial ergonomics around it.</li><li>Optional: try to bargain with reality, by attempting to find some hacky mechanisms to keep both notations around. Realize that it's not satisfactory.</li><li>Give up, be at peace, and reap the benefits of designing your programs <strong>system-first rather than language-first</strong>.</li></ol><p>I went slowly through this process myself, with some maintenance pains in the way, which hopefully this article can spare you.</p><h2 id="the&#95;great&#95;benefits&#95;of&#95;namespaced&#95;keys">The great benefits of namespaced keys</h2><p>First, it's worth emphasizing that <strong>the naming of data attributes is an important issue, however innocuous it may feel.</strong> Data attributes such as database columns or API fields are not only the bread and butter of our code, they're also some of the strongest commitments we make when growing an information system, often stronger that the choice of programming language. Once a data attribute is part of the contract between several components the system, it becomes very hard to change. This is true even of small systems such as web or mobile apps.</p><p>In recent years, Clojure has encouraged the programming convention of conveying data using <i>namespaced</i> keys, e.g using <code>:myapp.user/id</code> rather than just <code>:id</code>. Namespacing is great, because by reducing the potential for name collisions, it eliminates a lot of ambiguity about names.</p><p>The <strong>significant benefits</strong> of this approach are:</p><ol><li><strong>context-free readability:</strong> when you see <code>:myapp.user/id</code> in your code, thanks to the <code>myapp.user</code> part, you can tell immediately what kind of data it conveys, and what type of entity it operates on. If you just saw <code>:id</code>, you'd have to figure that out from context.</li><li><strong>data traceability:</strong> with a simple text search in the code, you can immediately follow all the places where this piece of data is used across your entire system, whatever the language used at each place. This basic ability is significantly helpful for maintenability. I think many developers don't realize how big a difference it makes.</li></ol><p>Observe that these benefits apply regardless of the choice of namespacing notation: you would reap them whether you write <code>:myapp.user/id</code>, <code>:myapp-user-id</code>, <code>:myappUserId</code> or <code>:myapp&#95;user&#95;id</code>. <strong>It does not matter which namespacing notation you choose, as long as you use it everywhere.</strong></p><p>In other languages, programmers have traditionally relied on type systems to remove such ambiguity. Type systems are not as good for this purpose, because they don't reach beyond language boundaries.</p><p>Clojure's specific convention also offers some comparatively <strong>insignificant benefits:</strong></p><ul><li><strong>prettiness:</strong> <i>"look at <code>:myapp.user/first-name</code>, it's so beautiful! I can use slashes and dashes in programmatic names, this is THE POWER OF LISP!"</i></li><li><strong>concision affordances:</strong> in Clojure code, using namespace aliases, you can write <code>::user/first-name</code> as a shorthand for <code>:myapp.user/first-name</code>. Big deal. I mean, I can relate to how pleasing this feels when coding, but again, please consider that thinking of the whole system may be more important than this sort of local preferences.</li></ul><h2 id="advantages&#95;of&#95;'snake&#95;case':&#95;portability&#95;and&#95;ubiquity">Advantages of 'snake case': portability and ubiquity</h2><p>In a real-world system, data attributes are bound to travel through many media: SQL columns, ElasticSearch fields, GraphQL fields, JSON documents... if the system involves other languages as Clojure, they may be represented as class members. As mentioned above, using the same name - spelled in <i>exactly</i> the same way - for the data attribute in all these representations is a precious thing, because you can trace it across your codebase with one basic text search. You can track its usage not only in Clojure code, but also in SQL queries, ElasticSearch queries, JavaScript client code, etc.</p><p>Clojure's conventional notation for keys (e.g <code>myapp.person/first-name</code>), <strong>a.k.a lisp-case, is portable to almost none of these other platforms:</strong> it's not suitable for SQL column names, nor for GraphQL field names, nor for ElasticSearch fields, nor for Java/Python class members... Some people have argued that in those systems you should just drop the entity-name part (<code>myapp.person</code>), as it will be represented in another construct such as the SQL table name, but that's generally misguided IMO, because you're back to having to disambiguate meaning from context, and you're making the fragile assumption that colocated keys should always have the same entity-name part (think e.g of <code>:myapp.person/name</code> and <code>myapp.admin/password</code>).</p><p>On the other hand, as far as I can tell, <strong>it's hard to come by a platform that does not support <code>snake&#95;case</code>.</strong> Using it may not always be idiomatic, but it's almost always supported. That's reason enough to make snake_case a better default, because having one ubiquitous notation is much preferrable to having many locally idiomatic ones.</p><h2 id="frequent&#95;objections">Frequent objections</h2><h3 id=""this&#95;is&#95;not&#95;idiomatic&#95;clojure"">"This is not idiomatic Clojure"</h3><p>Your programs have more important requirements than being idiomatic. Programming history is riddled with bad design decisions made in the name of being idiomatic. Anyone who's worked through a nasty Scala class hierarchy knows how much incidental complexity some programmers are willing to inflict upon themselves for the sake of being idiomatic (<i>"because it's SO much better to write <code>subject.verb&#40;complement&#41;</code> than <code>verb&#40;subject, complement&#41;</code>. It's more idiomatic, you see."</i>). Let's avoid doing that to your program, or the Clojure ecosystem.</p><h3 id=""the&#95;lisp-case&#95;convention&#95;lets&#95;me&#95;destructure&#95;keywords"">"The lisp-case convention lets me destructure keywords"</h3><p><i>I like the ability of destructuring my keywords into an entity-name part and an attribute part, for instance:</i></p><pre><code class="clojure">&#40;namespace :myapp.user/first-name&#41;
+=&gt; &quot;myapp.user&quot;
+
+&#40;name :myapp.user/first-name&#41;
+=&gt; &quot;first-name&quot;
+</code></pre><p><i>I can leverage that to manipulate my data attributes generically in my programs.</i></p><p>Don't do that. Don't treat Clojure keywords as composite data structures. This is accidental complexity waiting to happen. Programmatic names are meant for humans to read, not for programs to interpret. Changing an attribute name should not be able to change the behaviour of your program. In Hickeyian terms: you'd be complecting naming with structure.</p><p>As a basic example of how this may break, consider that it's normal and expected to find in the same entity keys with different namespaces, e.g <code>:person/first-name</code> and <code>:myapp.user/singup-date</code>.</p><h3 id=""but&#95;clojure.spec&#95;encourages&#95;the&#95;use&#95;of&#95;clojure-namespaced&#95;keywords!"">"But clojure.spec encourages the use of Clojure-namespaced keywords!"</h3><p>Yeah... I know. In a way, Clojure Spec does what I've told you not to do in the previous section: relying programmatically on a naming convention for keywords, as Spec expects the keys you register to be Clojure-namespaced. Pushing further in that direction would be, in my opinion, a design error of clojure.spec.</p><p>That said, clojure.spec does quite sensibly make room for other namespacing conventions (via <code>:req-un</code> and <code>:opt-un</code>), and so clojure.spec is compatible with the recommendation this article is making. The semantics of Clojure Spec would be completely broken if name collisions were allowed, and so it's understandable that it's decided to check for namespacing.</p><h3 id=""this&#95;will&#95;create&#95;inconsistencies&#95;in&#95;our&#95;code&#95;style"">"This will create inconsistencies in our code style"</h3><p><strong>What might worry you:</strong> some parts of your code might be forced to use keywords in lisp-case - for instance, because libraries like Integrant impose them on you. Having these keys in lisp-case and other in snake_case might be disturbing.</p><p>If that's troubling you, you're in for a pleasant surprise: the visual constrast between <code>snake&#95;case</code> and <code>lisp-case</code> actually makes the code <i>more</i> readable, because it's signals which keys are meant for local use and which are meant to travel across the system.</p><p>By the way, you have already seen an instance of readability enhanced by contrasted notation: in Clojure's syntax itself, where parens <code>&#40;... &#41;</code> are used to denote invocations, and square brackets <code>&#91;... &#93;</code> are used to denote lexical bindings, departing from the Lisp tradition of using parens for everything.</p><p>Again, I don't want to put too much emphasis on this aspect, because I think it's a relatively minor issue. Even without this bonus point, <code>snake&#95;case</code> would be preferrable.</p><h3 id=""but&#95;i&#95;can&#95;just&#95;write&#95;a&#95;key-translation&#95;layer&#95;at&#95;the&#95;edge&#95;of&#95;my&#95;clojure&#95;program..."">"But I can just write a key-translation layer at the edge of my Clojure program..."</h3><p>... and then you'd lose the main benefit of namespacing, which is the ability to track a data attribute across your entire system rather than just one component of it.</p><p>Allow me to insist: the global searchability of programmatic names is much more important than their conformance to local naming customs.</p><h2 id="why&#95;have&#95;we&#95;used&#95;lisp-case&#95;in&#95;clojure,&#95;anyway?">Why have we used lisp-case in Clojure, anyway?</h2><p>Reading the above argument, you might wonder how the Clojure community came to use the <code>:myapp.user/first-name</code> naming convention in the first place, since its lack of portability is so problematic.</p><p>My understanding of Clojure's history is that <strong>this notation was not initially meant for keywords, and that its relevance to naming far-ranging data attributes was something of an afterthought.</strong></p><p>In the first years of Clojure, it wasn't conventional to use namespaced keywords at all. The namespacing notation was meant for Symbols, such as <code>clojure.core/map-indexed</code>, for naming Vars, i.e for names that were not meant to be used outside of a Clojure program. The <code>.</code> separator for namespaces mimicked the naming of Java packages (recall the emphasis on Java interop in the early days of Clojure), whereas the use of dashes '<code>-</code>' followed a Lisp tradition.</p><p>Quite reasonably, Clojure introduced namespace aliases to refer to such names more concisely in calling code: e.g <code>usr/find-by-id</code> rather than <code>myapp.user/find-by-id</code>. As this syntax was applicable to Symbols, it seemed natural to extend it to the other symbolic type of Clojure, namely Keywords, and that's how we came to use keys such as <code>::usr/first-name</code>. Then, the Clojure ecosystem gradually realized how valuable namespacing keywords was, and adopted this namespacing convention as the default.</p><p>So I would not take away that the <code>:myapp.user/first-name</code> notation resulted from an in-depth reflection of the best naming convention to use for data attributes in a system. We simply didn't arrive to it from that angle. As this convention got slowly adopted, some people probably noticed that it presented portability issues: but keep in mind that the use of namespaced keys was not yet an established practice at the time, and that this was already a big improvement over where we came from, which was not using namespaced keys at all.</p><h2 id="conclusion">Conclusion</h2><p>This article makes 2 unintuitive claims: that the choice of notation for namespaced keys matters, and that the one used conventionally in Clojure is often suboptimal. It proposes to replace it with <code>:snake&#95;case</code>, the main drawback being that it looks ugly and awkward, which seems like a good deal as design tradeoffs go.</p><p>2 years ago, I opened a <a href='https://clojureverse.org/t/should-we-really-use-clojures-syntax-for-namespaced-keys/1516'>discussion on ClojureVerse</a> questioning the use of Clojure's namespacing convention. Objections were raised, but none that convinced me or brought up issues I had overlooked, and I'm now confident that this article makes the best default recommendation.</p><p>In my experience, this proposal tends to be met with reluctance, and remembered without regrets. I myself came to it begrudgingly (a coworker once phrased it well: <i>"I hate it, but it's right."</i>) Clojure developers program with love, and love drives us to cherish little idiosyncrasies. That said, I find it paradoxical that most of the resistance to this idea was along the lines of favouring 'local-language convenience', in a community where talks like <i><a href='https://www.youtube.com/watch?v=ROor6_NGIWU'>The Language of the System</a></i> and <i><a href='https://www.youtube.com/watch?v=LEZv-kQUSi4'>Narcissistic Design</a></i> have championed as higher principles the adaptability and friendliness to a varied surrounding system.</p><p>I hope the ideas presented here can help you program your systems smoothly and harmoniously. Thank you for reading!</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/Clojure.html">Clojure</a>
+    
+    <a href="/Architecture.html">Architecture</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/2020-05-15_Using-Decision-Trees-for-charting-ill-behaved-datasets.html">Using Decision Trees for charting ill-behaved datasets &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/clojure-key-namespacing-convention-considered-harmful.html">Clojure&#39;s keyword namespacing convention Considered Harmful</a></li>
+                        
+                        <li><a href="/posts/2020-05-15_Using-Decision-Trees-for-charting-ill-behaved-datasets.html">Using Decision Trees for charting ill-behaved datasets</a></li>
+                        
+                        <li><a href="/posts/2020-01-31_how-covariances-behave-some-intuitive-views-on-normal-distributions-and-gaussian-processes.html">How covariances behave: some intuitive views on normal distributions and Gaussian Processes</a></li>
+                        
+                        <li><a href="/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html">2 proofs in Information Theory: channel-convexity of Mutual Information</a></li>
+                        
+                        <li><a href="/posts/2019-12-03-inferring-earth-tilt-from-day-lengths.html">Inferring the Earth&#39;s tilt from day lengths</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/Physics.html">Physics</a></li>
+                        
+                        <li><a href="/SciPy.html">SciPy</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/Mathematics.html">Mathematics</a></li>
+                        
+                        <li><a href="/Scientific computing.html">Scientific computing</a></li>
+                        
+                        <li><a href="/Python.html">Python</a></li>
+                        
+                        <li><a href="/Data Science.html">Data Science</a></li>
+                        
+                        <li><a href="/Information Theory.html">Information Theory</a></li>
+                        
+                        <li><a href="/Data Engineering.html">Data Engineering</a></li>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Machine Learning.html">Machine Learning</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>
