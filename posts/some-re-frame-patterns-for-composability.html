@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <title>Val on Programming: Some re-frame patterns for composability</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href='https://fonts.googleapis.com/css?family=Bree+Serif|Open+Sans:400,400i,600' rel='stylesheet'
+          type='text/css'>
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/css/bootstrap.min.css">
+    <link href="//maxcdn.bootstrapcdn.com/font-awesome/4.2.0/css/font-awesome.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/highlight.js/8.1/styles/default.min.css">
+    <link href="/css/screen.css" rel="stylesheet" type="text/css" />
+</head>
+<body>
+
+
+<nav class="navbar navbar-default">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/index.html">Val on Programming</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li ><a href="/index.html">Home</a></li>
+                <li
+                ><a href="/archives.html">Archives</a></li>
+                
+                <li
+                >
+                <a href="/pages/about.html">About</a>
+                </li>
+                
+                <li><a href="/feed.xml">RSS</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div><!--/.container-fluid -->
+</nav>
+
+
+<div class="container">
+
+
+    <div class="row">
+        <div class="col-lg-9">
+            <div id="content">
+                
+<div id="post">
+    <div class="post-header">
+    <div id="post-meta" class="row">
+        <div class="col-lg-6">January 14, 2021</div>
+        
+    </div>
+    <h2>Some re-frame patterns for composability</h2>
+</div>
+<div>
+    <ol class="content"><li><a href="#parameterizing_components_with_an_app-db_path">Parameterizing components with an app-db path</a></li><ol><li><a href="#introduction:_where_to_store_state">Introduction: where to store state</a></li><li><a href="#generic_subscriptions_and_events_for_app-db_paths">Generic subscriptions and events for app-db paths</a></li><li><a href="#what_about_reagent_cursors?">What about Reagent cursors?</a></li></ol><li><a href="#callback_events_and_partial&apos;d_events">Callback events and partial'd events</a></li><ol><li><a href="#for_components">For components</a></li><li><a href="#for_effects_and_events">For effects and events</a></li></ol><li><a href="#parameterizing_components_with_subscriptions">Parameterizing components with subscriptions</a></li><li><a href="#parameterizing_subscriptions_with_subscriptions">Parameterizing subscriptions with subscriptions</a></li><li><a href="#effects-requesting_callback_functions">Effects-requesting callback functions</a></li><ol><li><a href="#introduction:_requesting_effects_non-exhaustively">Introduction: requesting effects non-exhaustively</a></li><li><a href="#discussion:_aren&apos;t_callback_functions_at_odds_with_re-frame&apos;s_data_orientation?">Discussion: aren't callback functions at odds with re-frame's data orientation?</a></li><li><a href="#alternative:_dispatching_several_events">Alternative: dispatching several events</a></li><li><a href="#some_utils_for_rf/reg-event-fx">Some utils for rf/reg-event-fx</a></li></ol><li><a href="#consider_bypassing_re-frame&apos;s_effects_system_altogether">Consider bypassing re-frame's Effects System altogether</a></li><li><a href="#appendix:_naming_conventions">Appendix: naming conventions</a></li><li><a href="#conclusion">Conclusion</a></li></ol>
+    <p>This article proposes some strategies for making <a href='https://github.com/day8/re-frame'>re-frame</a> codebases more maintainable, chiefly by making components and events more reusable. The main idea is to enable customization by callers, by <strong>allowing callers to inject events, subscriptions, app-db paths and even callback functions as arguments.</strong> This approach is not conceptually difficult, but we found it unintuitive when we started using re-frame.</p><p>We have been using these patterns over the course of 1.5 years at <a href='https://www.ytems.co/'>Ytems</a> (an accounting platforms for accountants focused on independent contractors), for implementing the back-office of accountants, a re-frame networked browser app requiring advanced ergonomics for viewing, searching and editing accounting records, related information, and account customization.</p><p>This article hopes to foster consideration and criticism of the suggested patterns. It might also serve to outline some consequences and limitations of re-frame's design.</p><h2 id="parameterizing&#95;components&#95;with&#95;an&#95;app-db&#95;path">Parameterizing components with an app-db path</h2><h3 id="introduction:&#95;where&#95;to&#95;store&#95;state">Introduction: where to store state</h3><p>A frequent requirement for a re-frame component is to maintain some subset of the app-db, typically a map nested in the app-db at a given path.</p><p>If that path is hardcoded, the reusability of the component will be very limited. Therefore, I recommend you <strong>consider providing the app-db path as an argument to the component.</strong> Here's a code example, for an imaginary Git platform called MyGit:</p><pre><code class="clojure">&#40;ns mygit.ui.merge-request-viewer
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+
+;; NOT PORTABLE: hardcoded app-db path
+
+&#40;defn &lt;merge-request-viewer&gt;
+  &#91;mreq&#93;
+  &#40;let &#91;local-state @&#40;rf/subscribe &#91;::get-local-state &#40;:mygit.merge-request/id mreq&#41;&#93;&#41;
+        {collapsed? ::collapsed} local-state&#93;
+    ...&#41;&#41;
+
+&#40;rf/reg-sub ::get-local-state
+  &#40;fn &#91;app-db &#91;&#95; mreq-id&#93;&#93;
+    &#40;get-in app-db
+      ;; Notice how the app-db path is hardcoded here:
+      &#91;::mreq-id-&gt;local-state mreq-id&#93;&#41;&#41;&#41;
+
+
+
+;; MORE PORTABLE: app-db path supplied by caller
+
+&#40;defn &lt;merge-request-viewer&gt;
+  &#91;path&#95;local-state mreq&#93;
+  &#40;let &#91;local-state @&#40;rf/subscribe &#91;::get-local-state path&#95;local-state&#93;&#41;
+        {collapsed? ::collapsed} local-state&#93;
+    ...&#41;&#41;
+
+&#40;rf/reg-sub ::get-local-state
+  &#40;fn &#91;app-db &#91;&#95; path&#95;local-state&#93;&#93;
+    &#40;get-in app-db path&#95;local-state&#41;&#41;&#41;
+</code></pre><p>Your component how has a slightly longer signature; more importantly, it has one fewer concern: storage location of state, better handled by a caller who knows more context.</p><h3 id="generic&#95;subscriptions&#95;and&#95;events&#95;for&#95;app-db&#95;paths">Generic subscriptions and events for app-db paths</h3><p>Once you use app-db paths, subscriptions which do nothing more than call <code>get-in</code> become so frequent that I recommend writing a generic subscription for that:</p><pre><code class="clojure">&#40;ns mygit.utils.re-frame
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+&#40;rf/reg-sub ::get-in
+  &#40;fn &#91;app-db &#91;&#95; app-db-path default-value&#93;&#93;
+    &#40;get-in app-db app-db-path default-value&#41;&#41;&#41;
+
+&#40;comment
+  &quot;Use the above as follows, assuming a path named&quot; path&#95;local-state &quot;:&quot;
+  &#40;let &#91;my-local-state @&#40;rf/subscribe &#91;::get-in path&#95;local-state&#93;&#41;&#93;
+    ...&#41;&#41;
+</code></pre><p>You might feel uneasy with using such a blindly generic subscription <i>("Aren't re-frame subscriptions supposed to be more domain-specific?")</i>. Yet, we've found that using <code>::get-in</code> is often an improvement over a custom subscription, which would be excessive indirection and abstraction.</p><p>The same principle holds for events:</p><pre><code class="clojure">&#40;rf/reg-event-db ::assoc-in
+  &#40;fn &#91;app-db &#91;&#95; app-db-path v&#93;&#93;
+    &#40;assoc-in app-db app-db-path v&#41;&#41;&#41;
+
+&#40;comment
+  &quot;Use the above as follows:&quot;
+  &#40;rf/dispatch &#91;::assoc-in path&#95;local-state {:some &quot;value&quot;}&#93;&#41;&#41;
+
+
+&#40;rf/reg-event-db ::dissoc-in
+  &#40;fn &#91;app-db &#91;&#95; app-db-path ks&#93;&#93;
+    &#40;assert &#40;seqable? ks&#41;&#41;
+    &#40;update-in app-db app-db-path
+      &#40;fn &#91;v&#93;
+        &#40;apply dissoc v ks&#41;&#41;&#41;&#41;&#41;
+
+
+&#40;rf/reg-event-db ::update-in
+  ;; this one is a bit more controversial, because not data-oriented. Tread lightly.
+  &#40;fn &#91;app-db &#91;&#95; app-db-path f &amp; args&#93;&#93;
+    &#40;apply update-in app-db app-db-path f args&#41;&#41;&#41;
+</code></pre><h3 id="what&#95;about&#95;reagent&#95;cursors?">What about Reagent cursors?</h3><p>Indeed, paths have semantics similar to Reagent cursors. However, AFAICT, Reagent cursors are simply incompatible with re-frame's design, by virtue of being mutable. Re-frame does not want you to manage its app-db through side-effects as with a Ratom: you're supposed to go through re-frame's effect system, and the re-frame app-db Ratom is not part of the public API.</p><h2 id="callback&#95;events&#95;and&#95;partial'd&#95;events">Callback events and partial'd events</h2><h3 id="for&#95;components">For components</h3><p>In a similar vein, a re-frame component might need to dispatch different events depending on the context in which it is used. At this point, it makes sense for these <strong>events to be dynamically provided as arguments by the caller</strong> (and so we call them <i>callback events</i>).</p><p><strong>Example: generic confirmation modal.</strong> Imagine you want to program a generic component which prompts the user to confirm or cancel some action:</p><pre><code class="clojure">;; Caller code
+
+&#40;ns mygit.ui.merge-request
+  &#40;:require &#91;mygit.ui.confirmation-modal&#93;&#41;&#41;
+
+
+&#40;defn &lt;modal-delete-merge-request&gt;
+  &#91;mreq-id&#93;
+  &#91;mygit.ui.confirmation-modal/&lt;modal-prompting-confirmation&gt;
+   &quot;Are you sure you want to delete this Merge Request?&quot;
+   &#91;::delete-merge-request mreq-id&#93; ;; NOTE: the caller provides the events to be dispatched by the child component.
+   &#91;::hide-delete-mreq-modal&#93;&#93;&#41;
+
+&#40;rf/reg-event-fx ::delete-merge-request &#40;fn &#91;cofx &#91;&#95; mreq-id&#93;&#93; ...&#41;&#41;
+&#40;rf/reg-event-db ::hide-delete-mreq-modal &#40;fn &#91;app-db &#95;&#93; ...&#41;&#41;
+
+...
+
+&#40;defn &lt;modal-discard-comment&gt;
+  &#91;path&#95;comment-draft&#93;
+  &#91;mygit.ui.confirmation-modal/&lt;modal-prompting-confirmation&gt;
+   &quot;Are you sure you want to discard this comment?&quot;
+   &#91;::discard-comment path&#95;comment-draft&#93;
+   &#91;::hide-discard-comment&#93;&#93;&#41;
+
+&#40;rf/reg-event-fx ::discard-comment &#40;fn &#91;cofx &#91;&#95; path&#95;comment-draft&#93;&#93; ...&#41;&#41;
+&#40;rf/reg-event-db ::hide-discard-comment &#40;fn &#91;app-db &#95;&#93; ...&#41;&#41;
+
+
+;; Called code
+
+&#40;ns mygit.ui.confirmation-modal&#41;
+
+&#40;defn &lt;modal-prompting-confirmation&gt;
+  &#91;question-text evt&#95;when-confirmed evt&#95;when-cancelled&#93;
+  &#91;:div
+   ...
+   &#91;:p question-text&#93;
+   ...
+   ;; NOTE: the events to dispatch are opaque values to this component.
+   &#91;:button {:on-click #&#40;rf/dispatch evt&#95;when-confirmed&#41;} &quot;Confirm&quot;&#93;
+   &#91;:button {:on-click #&#40;rf/dispatch evt&#95;when-cancelled&#41;}&#93; &quot;Cancel&quot;&#93;&#41;
+</code></pre><p><strong>Limitation:</strong> if both the component and its caller want to request effects at the same time, you might find callback events limiting. We discuss potential solutions below with <i><a href='#effects-requesting_callback_functions'>Effects-Requesting Callback Functions</a></i>.</p><h3 id="for&#95;effects&#95;and&#95;events">For effects and events</h3><p>The same logic applies <strong>for re-frame effects and events: their handler function might accept callback events as parameters.</strong></p><p><strong>Example: backend API.</strong> Typically, you might have an effect <code>:mygit.effect/call-backend-api</code>. Its effect handler must know what event to dispatch when the API response arrives:</p><pre><code class="clojure">&#40;ns mygit.effect
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+&#40;rf/reg-fx ::call-backend-api
+  &#40;fn &#91;{:as api-request, pevt&#95;handle-response ::pevt&#95;handle-api-response}&#93;
+    ...
+    &#40;call-backend-api &#40;dissoc api-request ::pevt&#95;handle-api-response&#41;
+      &#40;fn &#91;api-response&#93;
+        ;; NOTE the supplied event tuple is used as a &#40;partial'd&#41; callback function:
+        ;; we inject the api response as its last argument.
+        &#40;rf/dispatch &#40;conj pevt&#95;handle-response api-response&#41;&#41;&#41;&#41;
+    &#40;comment pevt&#95;... &quot;stands for Partial'd EVenT,&quot;
+      &quot;in the spirit of&quot; clojure.core/partial&#41;
+    ...&#41;&#41;
+
+
+;; Caller code
+
+&#40;ns mygit.ui.merge-request
+  &#40;:require &#91;mygit.effect&#93;
+            &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+&#40;rf/reg-event-fx ::refresh-merge-request--init
+  &#40;fn &#91;cofx &#91;&#95; mreq-id&#93;&#93;
+    {:fx &#91;&#91;:mygit.effect/call-backend-api
+           {:http/method :http/get
+            :mygit.backend-api/endpoint &#40;str &quot;/merge-request/&quot; mreq-id &quot;/details&quot;&#41;
+            ;; !!! HERE !!! example of partial'd callback event below:
+            :mygit.effect/pevt&#95;handle-api-response &#91;::refresh-merge-request--succeed mreq-id&#93;}&#93;
+          ...&#93;
+     :db ...}&#41;&#41;
+
+
+&#40;rf/reg-event-db ::refresh-merge-request--succeed
+  &#40;fn &#91;app-db &#91;&#95; mreq-id api-response&#93;&#93;
+    &#40;let &#91;mreq-details &#40;:mygit.backend-api/result api-response&#41;&#93;
+      ...&#41;&#41;&#41;
+</code></pre><p>Let's recap <strong>how we came to this design:</strong></p><ol><li>Asynchronous effects (like <code>:mygit.effect/call-backend-api</code>) must trigger side-effects when they complete.</li><li>Re-frame wants you to trigger side-effects by dispatching an event.</li><li>Therefore, an async re-frame effect will need to dispatch an event, and inject resolved data into it.</li><li>Thus, re-frame naturally invites us to use some events as (partial'd) callback functions.</li></ol><p>Arguably, it is a weakness of re-frame that it makes us use events as callback functions, yet does not provide events with the expressive power and composability of actual Clojure functions: there is no such thing as anonymous events, higher-order events, etc.</p><h2 id="parameterizing&#95;components&#95;with&#95;subscriptions">Parameterizing components with subscriptions</h2><p>You know the drill by now: we've parameterized Reagent components with app-db paths and events, some why not subscriptions? Indeed, why not: <strong>consider writing components which accept re-frame subscriptions as arguments.</strong> In pseudo-code:</p><pre><code class="clojure">&#40;defn &lt;my-component&gt;
+  &#91;sub&#95;fetch-my-data ...&#93;
+  &#40;let &#91;my-data @&#40;rf/subscribe sub&#95;fetch-my-data&#41;&#93;
+    ...&#41;&#41;
+</code></pre><p>As before, the motivation is that <code>&lt;my-component&gt;</code> might not have enough context to know what subscription to use, so that's better left to its callers.</p><p>Semantically, a subscription vector can be viewed as a not-yet-evaluated function call for resolving data.</p><h2 id="parameterizing&#95;subscriptions&#95;with&#95;subscriptions">Parameterizing subscriptions with subscriptions</h2><p>Can we do that? Yes we can! Here's an example, for the use case of displaying a list of MyGit issues in a filtering UI:</p><pre><code class="clojure">&#40;ns mygit.ui.issues
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+
+&#40;rf/reg-sub ::displayed-issues
+  &#40;fn signals &#91;&#91;&#95; project-id sub&#95;filter-fn&#93;&#93;
+    &#91;&#40;rf/subscribe &#91;::all-issues project-id&#93;&#41;
+     &#40;rf/subscribe sub&#95;filter-fn&#41;&#93;&#41;
+  &#40;fn &#91;&#91;all-issues filter-fn&#93; &#95;&#93;
+    &#40;-&gt;&gt; all-issues &#40;filter filter-fn&#41; &#40;vec&#41;&#41;&#41;&#41;
+</code></pre><h2 id="effects-requesting&#95;callback&#95;functions">Effects-requesting callback functions</h2><h3 id="introduction:&#95;requesting&#95;effects&#95;non-exhaustively">Introduction: requesting effects non-exhaustively</h3><p>Sometimes, a components needs to trigger some side-effects, but some of those side-effects are better known by the callers, while others are better known by the component. For example, the caller of a form component might want to perform some context-specific side-effects after the form has been submitted (like moving to another page), while at the same time the form component itself has to perform some clean-up side-effects.</p><p>When that happens, one approach is to dispatch 2 events, either in parallel or serially. We'll consider such a multi-events approach <a href='#alternative:_dispatching_several_events'>below</a>, but it has downsides, and so for now <strong>we'll assume that all effects must happen in one event handler,</strong> a requirement we call the <i>all-effects-in-one-event constraint</i>.</p><p>In this case, it is not very suitable for the caller to provide a callback event: the caller-side event handler would have to know internal details of the called component.</p><p>So here's an alternative to consider: <strong>the caller provides a callback function, to be invoked in the component's event handler.</strong> Such a callback function accepts a re-frame Effects Map and returns it enriched with new effects.</p><p><strong>Example: optional effects after saving a comment.</strong> Imagine an editor for comments on MyGit issues, which in some contexts might need to perform some side-effects after saving, like displaying the next unanswered comment:</p><pre><code class="clojure">&#40;ns mygit.ui.comment.editor
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+
+&#40;defn &lt;comment-editor&gt;
+  &#91;editor-opts ...&#93;
+  ...&#41;
+
+
+&#40;rf/reg-event-fx ::save-comment--succeed ;; triggered when the backend tells us that the comment has been successfully saved.
+  &#40;fn &#91;cofx &#91;&#95; editor-opts comment-data&#93;&#93;
+    &#40;let &#91;fx-map {:db &#40;-&gt; &#40;:db cofx&#41;
+                        &#40;sync-comment-in-app-db comment-data&#41;
+                        &#40;cleanup-comment-editor-state editor-opts&#41;&#41;}&#93;
+      &#40;if-some &#91;callback-fn &#40;::add-fx&#95;after-saving-comment editor-opts&#41;&#93;
+        &#40;callback-fn fx-map cofx comment-data&#41; ;; &lt;-- HERE
+        fx-map&#41;&#41;&#41;&#41;
+
+
+;; Caller code
+
+&#40;ns mygit.ui.unanswered-comments
+  &#40;:require &#91;mygit.ui.project.queries :as project-queries&#93;
+            &#91;mygit.ui.comment.editor :as cmt-editor&#93;
+            &#91;reagent.core&#93;&#41;&#41;
+
+
+&#40;defn offer-to-answer-comment
+  &quot;Changes the UI state, prompting the user to answer the given Comment. Returns an updated re-frame app-db.&quot;
+  &#91;app-db cmt&#93;
+  &#40;-&gt; app-db
+    &#40;update-in ...&#41;
+    ...&#41;&#41;
+
+
+&#40;defn add-fx&#95;move-to-next-unanswered-comment
+  &#91;project-id fx-map cofx &#95;comment-data&#93;
+  &#40;comment add-fx&#95;do-some-stuff &quot;stands for Add Effects which Do Some Stuff.&quot;&#41;
+  &#40;if-some &#91;next-unanswered-cmt &#40;project-queries/find-next-unanswered-comment-for-project &#40;:db cofx&#41; project-id&#41;&#93;
+    &#40;assoc fx-map
+      :db
+      &#40;let &#91;app-db &#40;or &#40;:db fx-map&#41; &#40;:db cofx&#41;&#41;&#93;
+        &#40;offer-to-answer-comment app-db next-unanswered-cmt&#41;&#41;&#41;
+    fx-map&#41;&#41;
+
+
+&#40;defn &lt;unanswered-comments-wizard&gt;
+  &#91;project-id ...&#93;
+  &#91;:div ...
+   &#91;cmt-editor/&lt;comment-editor&gt;
+    {;; HERE the caller supplies the callback.
+     ::cmt-editor/add-fx&#95;after-saving-comment &#40;reagent.core/partial add-fx&#95;move-to-next-unanswered-comment project-id&#41;}
+    &#40;comment reagent.core/partial &quot;is used for performance: it preserves Reagent caching.&quot;
+      &quot;For this use case, it is probably not necessary.&quot;&#41;
+    ...&#93;&#93;&#41;
+</code></pre><h3 id="discussion:&#95;aren't&#95;callback&#95;functions&#95;at&#95;odds&#95;with&#95;re-frame's&#95;data&#95;orientation?">Discussion: aren't callback functions at odds with re-frame's data orientation?</h3><p>I understand the sentiment, and used to have similar misgivings: the arguments to a re-frame event are usually supposed to be information-supporting data structures, not functions.</p><p>That said, if your essential requirement is to customize event handling with arbitrary behaviour from the caller, then a callback function is a natural fit for that, more so than a data structure. Of course, instead of a callback function, you could also inject a Clojure Record implementing a protocol; that might make you feel better, but you'd probably be over-engineering it, and the semantics would be the same.</p><p>In particular, if you find yourself writing an interpreter for a homemade data-encoded domain-specific language to customize some event handler, then I suspect you're going astray, burdening your project with a hard challenge and inaccessible abstractions for a mirage of data-orientation. If you need an expressive language for customizing your event handling, use Clojure instead of reinventing it, and don't be shy about using callback functions: they're not data, but at least they're honest about it.</p><h3 id="alternative:&#95;dispatching&#95;several&#95;events">Alternative: dispatching several events</h3><p>Another strategy would be to dispatch 2 events, one for the component-level effects and one for the caller-level effects. Concretely, continuing with the above example:</p><pre><code class="clojure">&#40;ns mygit.ui.comment.editor
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+...
+
+&#40;rf/reg-event-fx ::save-comment--succeed ;; triggered when the backend tells us that the comment has been successfully saved.
+  &#40;fn &#91;cofx &#91;&#95; editor-opts comment-data&#93;&#93;
+    {:db &#40;-&gt; &#40;:db cofx&#41;
+           &#40;sync-comment-in-app-db comment-data&#41;
+           &#40;cleanup-comment-editor-state editor-opts&#41;&#41;
+     :fx &#40;when-some &#91;pevt &#40;::pevt&#95;after-saving-comment editor-opts&#41;&#93; ;; &lt;-- HERE
+           &#91;&#91;:dispatch &#40;conj pevt comment-data&#41;&#93;&#93;&#41;}&#41;&#41;
+</code></pre><p>I'm not sure to what extent this is encouraged or discouraged by re-frame. I've seen several code examples by re-frame authors featuring the <code>:dispatch</code> effect, suggesting that cascading events are acceptable practice. OTOH, starting from 1.1.0, re-frame has evolved to facilitate implementing event handlers which are a conjunction of behaviours contributed by separate parts of the app: it's become more straightforward to write event handlers which "do many things", which might make the use of <code>:dispatch</code> less legitimate.</p><p>I see various <strong>potential issues with using <code>:dispatch</code>,</strong> compared to a direct update of the <code>fx-map</code>:</p><ol><li>The state transition is <strong>no longer atomic:</strong> the app-db might go through some incorrect state between both events.</li><li>Testing the event handler may become more challenging, as the effects of the callback event won't visible when it returns.</li><li>The causality between both events might be harder to keep track of when debugging (although tooling like re-frame-10x seem to help with that).</li><li>The callback might also want to alter the fx-map in non-additive-ways before it ever runs: prevent some effects from happening, throw an error if it detects an inconsistency, etc.</li><li>More generally, I find the execution model of dispatching another event more convoluted, compared to having everying happen in one pure function call.</li></ol><p>All in all, I'm inconclusive: in many cases, these issues won't be a big deal, so dispatching 2 events might be just fine. Still, I expect fewer limitations to callback functions.</p><h3 id="some&#95;utils&#95;for&#95;rf/reg-event-fx">Some utils for rf/reg-event-fx</h3><p>Once using callback functions (and even without them), we tend to use <code>reg-event-fx</code> a lot, and have found the following functions to be quite handly for writing event handlers:</p><pre><code class="clojure">&#40;ns mygit.utils.re-frame&#41;
+
+
+&#40;defn add-fx&#95;update-app-db
+  &quot;Utility for updating the app-db in a reg-event-fx handler.
+
+  Given:
+  - `fx-map`, a re-frame Effects map, &#40;as returned by the handler&#41;
+  - `cofx`, a re-frame Co-Effects map, &#40;1st argument of the handler&#41;
+  - `transform-db-fn`, an app-db-transforming function,
+  returns a transformed `fx-map` with a :db entry holding a new app-db,
+  updated by calling `transform-db-fn`.&quot;
+  &#91;fx-map cofx transform-db-fn&#93;
+  &#40;let &#91;app-db &#40;or ;; Nontrivial: reading the app-db from the right place.
+                 &#40;get fx-map :db&#41;
+                 &#40;get cofx :db&#41;&#41;
+        new-app-db &#40;transform-db-fn app-db&#41;&#93;
+    &#40;assoc fx-map :db new-app-db&#41;&#41;&#41;
+
+
+&#40;defn add-fx&#95;append-effect
+  &quot;Utility for adding an effect in a reg-event-fx handler.
+
+  Given:
+  - `fx-map`, a re-frame Effects map,
+  - `rf-effect-tuple`, a re-frame Effect tuple &#40;e.g &#91;:dispatch my-event&#93;&#41;,
+  transforms `fx-map` so that it requests the effect represented by `rf-effect-tuple`.&quot;
+  &#91;fx-map rf-effect-tuple&#93;
+  &#40;update fx-map :fx #&#40;-&gt; % &#40;or &#91;&#93;&#41; &#40;conj rf-effect-tuple&#41;&#41;&#41;&#41;
+
+
+&#40;defn add-fx&#95;from-optional-fn
+  &#91;fx-map cofx f-or-nil &amp; args&#93;
+  &quot;Utility for applying an optional callback function in a reg-event-fx handler.
+
+  Given:
+  - `fx-map`, a re-frame Effects map, &#40;as returned by the handler&#41;
+  - `cofx`, a re-frame Co-Effects map, &#40;1st argument of the handler&#41;
+  - `f-or-nil`, either nil or a function &#40;&#91;fx-map cofx &amp; args&#93; -&gt; fx-map&#41;
+  - `&amp; args`, additional arguments to `f-or-nil`
+  returns an fx-map enriched by calling f-or-nil, when applicable.&quot;
+  &#40;if &#40;nil? f-or-nil&#41;
+    fx-map
+    &#40;apply f-or-nil fx-map cofx args&#41;&#41;&#41;
+</code></pre><p>With these, our example re-frame handler becomes more readable:</p><pre><code class="clojure">&#40;ns mygit.ui.comment.editor
+  &#40;:require &#91;mygit.utils.re-frame :as urf&#93;
+            &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+...
+
+&#40;rf/reg-event-fx ::save-comment--succeed ;; triggered when the backend tells us that the comment has been successfully saved.
+  &#40;fn &#91;cofx &#91;&#95; editor-opts comment-data&#93;&#93;
+    &#40;-&gt; {}
+      &#40;urf/add-fx&#95;update-app-db cofx
+        &#40;fn &#91;app-db&#93;
+          &#40;-&gt; app-db
+            &#40;sync-comment-in-app-db comment-data&#41;
+            &#40;cleanup-comment-editor-state editor-opts&#41;&#41;&#41;&#41;
+      &#40;urf/add-fx&#95;from-optional-fn cofx &#40;::add-fx&#95;after-saving-comment editor-opts&#41;&#41;&#41;&#41;&#41;
+
+...
+</code></pre><h2 id="consider&#95;bypassing&#95;re-frame's&#95;effects&#95;system&#95;altogether">Consider bypassing re-frame's Effects System altogether</h2><p>So far, this article has striven to stay in line with re-frame's intentions regarding the management of state and side-effects, and so we've only been exploring patterns that make use of re-frame's <i>effects system</i>: <code>rf/dispatch</code>, <code>rf/reg-event-fx</code>, <code>rf/reg-fx</code>, etc. However, <strong>re-frame's effects system is strongly opinionated, and these opinions might not always fit your requirements well.</strong> For example:</p><ol><li>re-frame's API design puts high priority on enforcing Clojure-level purity and data-orientation (which are not always the most critical concerns in a front-end codebase),</li><li>its event-driven programming interface is relatively clumsy for asynchronous programming (compared to using, say, Promises),</li><li>it makes you program effects by emitting code and writing interpreter extensions for a low-expressiveness imperative language.</li></ol><p>I'm not saying that those things are absolutely wrong, and the expected benefits of re-frame's effect system have been abundantly documented, but with such strong design orientations it is no surprise that these benefits are sometimes accompanied by significant shortcomings. Therefore, it seems reasonable to <strong>consider using re-frame only for its subscriptions API and not its effects system,</strong> at least in some parts of your project. Concretely, that means programming side-effects without <code>rf/dispatch</code>, <code>rf/reg-event-db</code>, <code>rf/reg-event-fx</code>, etc. Doing so is not very hard - here's a utility function that might help you down that path:</p><pre><code class="clojure">&#40;ns mygit.utils.re-frame
+  &#40;:require &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+
+&#40;defn update-app-db!
+  &quot;Immediately transforms the re-frame app-db.
+
+  If the app-db was held in an atom a, the semantics would be those of:
+
+  &#40;do &#40;apply swap! a f args&#41; nil&#41;&quot;
+  &#91;f &amp; args&#93;
+  &#40;rf/dispatch-sync &#91;::update-app-db- f args&#93;&#41;
+  nil&#41;
+
+&#40;rf/reg-event-db ::update-app-db-
+  &#40;fn &#91;app-db &#91;&#95; f args&#93;&#93;
+    &#40;apply f app-db args&#41;&#41;&#41;
+</code></pre><p>Yet <strong>another strategy is to bypass re-frame events, programming with effects alone.</strong> Here's a function to help you do that:</p><pre><code class="clojure">&#40;defn trigger-effects!
+  &quot;Triggers effects by invoking the given callback function, which must return a re-frame Effects Map and accept a Co-Effects Map.
+
+  Optionally, the effects can be triggered synchronously, i.e as if by reframe.core/dispatch-sync.&quot;
+  &#40;&#91;request-effects-fn&#93; &#40;trigger-effects! request-effects-fn false&#41;&#41;
+  &#40;&#91;request-effects-fn sync?&#93;
+   &#40;let &#91;evt &#91;::trigger-effects!- request-effects-fn&#93;&#93;
+     &#40;if sync?
+       &#40;rf/dispatch-sync evt&#41;
+       &#40;rf/dispatch evt&#41;&#41;&#41;&#41;&#41;
+
+&#40;rf/reg-event-fx ::trigger-effects!-
+  &#40;fn &#91;cofx &#91;&#95; request-effects-fn&#93;&#93;
+    &#40;request-effects-fn cofx&#41;&#41;&#41;
+</code></pre><p>For instance, continuing with the <a href='#for_effects_and_events'>above example</a> of refreshing a Merge Request:</p><pre><code class="clojure">&#40;ns mygit.ui.merge-request
+  &#40;:require &#91;mygit.effect&#93;
+            &#91;mygit.utils.re-frame :as urf&#93;
+            &#91;re-frame.core :as rf&#93;&#41;&#41;
+
+
+&#40;defn add-fx&#95;refresh-merge-request
+  &#91;fx-map cofx mreq-id&#93;
+  &#40;-&gt; fx-map
+    &#40;urf/add-fx&#95;update-app-db cofx ...&#41;
+    &#40;urf/add-fx&#95;append-effect
+      &#91;:mygit.effect/call-backend-api
+       {:http/method :http/get
+        :mygit.backend-api/endpoint &#40;str &quot;/merge-request/&quot; mreq-id &quot;/details&quot;&#41;
+        ;; Our call-backend-api effect now accepts a callback function, rather than a PEvent.
+        :mygit.effect/add-fx&#95;handle-response
+        &#40;fn add-fx&#95;receive-mreq &#91;fx-map cofx api-response&#93;
+          &#40;-&gt; fx-map
+            &#40;urf/add-fx&#95;update-app-db cofx
+              &#40;fn &#91;app-db&#93;
+                &#40;let &#91;mreq-details &#40;:mygit.backend-api/result api-response&#41;&#93;
+                  ...&#41;&#41;&#41;&#41;&#41;}&#93;&#41;&#41;&#41;
+
+
+&#40;defn &lt;button-refresh-merge-request&gt;
+  &#91;mreq-id&#93;
+  &#91;:button
+   {:on-click #&#40;urf/trigger-effects! ;; HERE requesting side-effects directly, without a re-frame event.
+                 &#40;fn &#91;cofx&#93; &#40;add-fx&#95;refresh-merge-request {} cofx mreq-id&#41;&#41;&#41;}
+   &quot;Refresh Merge Request&quot;&#93;&#41;
+</code></pre><p>Programming with effects while bypassing events retains some interesting properties of re-frame: effects are still programmed with pure functions, although they're no longer requested in a data-oriented way. That said, the issue of asynchronous flow control remains: AFAICT, we can't get around using callbacks.</p><h2 id="appendix:&#95;naming&#95;conventions">Appendix: naming conventions</h2><pre><code class="clojure">&#40;comment ;; CAST OF CHARACTERS:
+
+  app-db &quot;The re-frame app-db.&quot;
+
+  fx-map &quot;A re-frame Effects Map, which declares what side-effects must be performed, see:&quot; ;; https://github.com/day8/re-frame/blob/master/docs/Effects.md#the-effects-map
+  cofx &quot;A re-frame CoEffects Map, see:&quot; ;; https://github.com/day8/re-frame/blob/master/docs/EffectfulHandlers.md#the-coeffects
+  add-fx&#95;do-some-stuff &quot;an effects-requesting function, with a signature like:&quot; &#40;&#91;fx-map cofx ...&#93; -&gt; enriched-fx-map&#41;
+  &quot;The above come together in a re-frame Event Handler:&quot;
+  &#40;rf/reg-event-fx ::do-some-stuff
+    &#40;fn my-event-handler &#91;cofx my-event&#93;
+      &#40;let &#91;&#91;&#95;event-name arg1 arg2&#93; my-event&#93;
+        &#40;-&gt; {}
+          &#40;as-&gt; fx-map
+            &#40;add-fx&#95;do-some-stuff fx-map cofx arg1 arg2&#41;&#41;&#41;&#41;&#41;&#41;
+
+  &lt;my-component&gt; &quot;A Reagent component.&quot;
+
+  path&#95;some-piece-of-state &quot;A vector to locate a piece of state in the app-db, to be used with&quot; get-in, assoc-in, update-in &quot;etc.&quot;
+  &quot;Example:&quot; &#91;::merge-request-id-&gt;editor-state mreq-id ::unsaved-changes&#93;
+
+  evt&#95;do-some-stuff &quot;a re-frame Event, e.g&quot; &#91;:mygit.ui.merge-request/refresh-merge-request--succeed mreq-id api-response&#93;
+  pevt&#95;do-some-stuff &quot;a re-frame Partial'd Event, e.g&quot; &#91;:mygit.ui.merge-request/refresh-merge-request--succeed mreq-id&#93;
+
+  &#42;e&#41;
+</code></pre><h2 id="conclusion">Conclusion</h2><p>The main principles behind the patterns we've described are:</p><ol><li>Components can be made more portable by allowing their behaviour to vary depending on context. Callers are usually in a better position to know the context, so components are made more adaptable by accepting more arguments from callers.</li><li>In some situations, you might find it interesting to bypass some of re-frame's machinery for side-effects.</li></ol><p>I'm not very happy to find myself programming with patterns, as I'd rather have projects rely on straightforward tools rather than style conventions and technical know-how. But I haven't found a better way with re-frame, and we should probably not expect front-end programming to be straightforward anyway, at least not in 2022.</p><p>It took us some time to come up with these patterns, and even more time before we dared use them; but we now believe they have a role to play in re-frame projects. Hopefully this can save others some work. Feedback is welcome.</p><p>Happy New Year!</p>
+</div>
+
+<div id="post-tags">
+    <b>Tags: </b>
+    
+    <a href="/re-frame.html">re-frame</a>
+    
+    <a href="/Clojure.html">Clojure</a>
+    
+    <a href="/Architecture.html">Architecture</a>
+    
+    <a href="/Programming.html">Programming</a>
+    
+</div>
+
+
+    <div id="prev-next">
+        
+        
+        <a class="right" href="/posts/clojure-key-namespacing-convention-considered-harmful.html">Clojure&#39;s keyword namespacing convention Considered Harmful &raquo;</a>
+        
+    </div>
+
+    
+    <div id="disqus_thread"></div>
+    <script type="text/javascript">
+        (function() {
+            var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+            dsq.src = '//valonprogramming.disqus.com/embed.js';
+            (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+        })();
+    </script>
+    
+
+
+</div>
+
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div id="sidebar">
+                <!--<h3>Links</h3>-->
+                <!--<ul id="links">-->
+                    <!---->
+                <!--</ul>-->
+                
+                <div id="recent">
+                    <h3>Recent Posts</h3>
+                    <ul>
+                        
+                        <li><a href="/posts/some-re-frame-patterns-for-composability.html">Some re-frame patterns for composability</a></li>
+                        
+                        <li><a href="/posts/clojure-key-namespacing-convention-considered-harmful.html">Clojure&#39;s keyword namespacing convention Considered Harmful</a></li>
+                        
+                        <li><a href="/posts/2020-05-15_Using-Decision-Trees-for-charting-ill-behaved-datasets.html">Using Decision Trees for charting ill-behaved datasets</a></li>
+                        
+                        <li><a href="/posts/2020-01-31_how-covariances-behave-some-intuitive-views-on-normal-distributions-and-gaussian-processes.html">How covariances behave: some intuitive views on normal distributions and Gaussian Processes</a></li>
+                        
+                        <li><a href="/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html">2 proofs in Information Theory: channel-convexity of Mutual Information</a></li>
+                        
+                    </ul>
+                </div>
+                
+                
+                <div id="tags">
+                    <h3>Tags</h3>
+                    <ul>
+                        
+                        <li><a href="/re-frame.html">re-frame</a></li>
+                        
+                        <li><a href="/tools.html">tools</a></li>
+                        
+                        <li><a href="/Physics.html">Physics</a></li>
+                        
+                        <li><a href="/SciPy.html">SciPy</a></li>
+                        
+                        <li><a href="/tutorial.html">tutorial</a></li>
+                        
+                        <li><a href="/Reagent.html">Reagent</a></li>
+                        
+                        <li><a href="/Mathematics.html">Mathematics</a></li>
+                        
+                        <li><a href="/Scientific computing.html">Scientific computing</a></li>
+                        
+                        <li><a href="/Python.html">Python</a></li>
+                        
+                        <li><a href="/Data Science.html">Data Science</a></li>
+                        
+                        <li><a href="/Information Theory.html">Information Theory</a></li>
+                        
+                        <li><a href="/Data Engineering.html">Data Engineering</a></li>
+                        
+                        <li><a href="/Clojure.html">Clojure</a></li>
+                        
+                        <li><a href="/Architecture.html">Architecture</a></li>
+                        
+                        <li><a href="/SQL.html">SQL</a></li>
+                        
+                        <li><a href="/Programming.html">Programming</a></li>
+                        
+                        <li><a href="/Machine Learning.html">Machine Learning</a></li>
+                        
+                        <li><a href="/Datomic.html">Datomic</a></li>
+                        
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+    <footer>Copyright &copy; 2015 Valentin Waeselynck
+        <p style="text-align: center;">Powered by <a href="http://cryogenweb.org">Cryogen</a></p></footer>
+</div>
+<script src="//code.jquery.com/jquery-1.11.0.min.js"></script>
+<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.0/js/bootstrap.min.js"></script>
+<script src="/js/highlight.pack.js" type="text/javascript"></script>
+<script>hljs.initHighlightingOnLoad();</script>
+<script src="/js/custom.js" type="text/javascript"></script>
+<script id="twitter-wjs" type="text/javascript" async defer src="//platform.twitter.com/widgets.js"></script>
+</body>
+</html>

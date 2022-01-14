@@ -53,6 +53,17 @@
 <div id="post">
     
     <div class="post-header">
+        <h2>Some re-frame patterns for composability</h2>
+        <div id="post-meta">
+            
+            <div class="date">January 14, 2021</div>
+        </div>
+    </div>
+    <p>This article proposes some strategies for making <a href="https://github.com/day8/re-frame">re-frame</a> codebases more maintainable, chiefly by making components and events more reusable. The main idea is to enable customization by callers, by <strong>allowing callers to inject events, subscriptions, app-db paths and even callback functions as arguments.</strong> This approach is not conceptually difficult, but we found it unintuitive when we started using re-frame.</p><p>We have been using these patterns over the course of 1.5 years at <a href="https://www.ytems.co/">Ytems</a> (an accounting platforms for accountants focused on independent contractors), for implementing the back-office of accountants, a re-frame networked browser app requiring advanced ergonomics for viewing, searching and editing accounting records, related information, and account customization.</p>
+    <a href="/posts/some-re-frame-patterns-for-composability.html">Continue reading &#8594;</a>
+    <hr>
+    
+    <div class="post-header">
         <h2>Clojure&#39;s keyword namespacing convention Considered Harmful</h2>
         <div id="post-meta">
             
@@ -96,17 +107,6 @@
     <a href="/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html">Continue reading &#8594;</a>
     <hr>
     
-    <div class="post-header">
-        <h2>Inferring the Earth&#39;s tilt from day lengths</h2>
-        <div id="post-meta">
-            
-            <div class="date">December 3, 2019</div>
-        </div>
-    </div>
-    
-    <a href="/posts/2019-12-03-inferring-earth-tilt-from-day-lengths.html">Continue reading &#8594;</a>
-    <hr>
-    
 
     <div id="prev-next">
         
@@ -130,6 +130,8 @@
                     <h3>Recent Posts</h3>
                     <ul>
                         
+                        <li><a href="/posts/some-re-frame-patterns-for-composability.html">Some re-frame patterns for composability</a></li>
+                        
                         <li><a href="/posts/clojure-key-namespacing-convention-considered-harmful.html">Clojure&#39;s keyword namespacing convention Considered Harmful</a></li>
                         
                         <li><a href="/posts/2020-05-15_Using-Decision-Trees-for-charting-ill-behaved-datasets.html">Using Decision Trees for charting ill-behaved datasets</a></li>
@@ -138,8 +140,6 @@
                         
                         <li><a href="/posts/2019-12-18_2-proofs-in-Information-Theory-channel-convexity-of-mutual-information.html">2 proofs in Information Theory: channel-convexity of Mutual Information</a></li>
                         
-                        <li><a href="/posts/2019-12-03-inferring-earth-tilt-from-day-lengths.html">Inferring the Earth&#39;s tilt from day lengths</a></li>
-                        
                     </ul>
                 </div>
                 
@@ -147,6 +147,8 @@
                 <div id="tags">
                     <h3>Tags</h3>
                     <ul>
+                        
+                        <li><a href="/re-frame.html">re-frame</a></li>
                         
                         <li><a href="/tools.html">tools</a></li>
                         
