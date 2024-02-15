@@ -1,0 +1,1508 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+<!-- 2024-02-15 Thu 09:02 -->
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Random tricks for computing costly sums</title>
+<meta name="author" content="Valentin Waeselynck" />
+<meta name="generator" content="Org Mode" />
+<style>
+  #content { max-width: 60em; margin: auto; }
+  .title  { text-align: center;
+             margin-bottom: .2em; }
+  .subtitle { text-align: center;
+              font-size: medium;
+              font-weight: bold;
+              margin-top:0; }
+  .todo   { font-family: monospace; color: red; }
+  .done   { font-family: monospace; color: green; }
+  .priority { font-family: monospace; color: orange; }
+  .tag    { background-color: #eee; font-family: monospace;
+            padding: 2px; font-size: 80%; font-weight: normal; }
+  .timestamp { color: #bebebe; }
+  .timestamp-kwd { color: #5f9ea0; }
+  .org-right  { margin-left: auto; margin-right: 0px;  text-align: right; }
+  .org-left   { margin-left: 0px;  margin-right: auto; text-align: left; }
+  .org-center { margin-left: auto; margin-right: auto; text-align: center; }
+  .underline { text-decoration: underline; }
+  #postamble p, #preamble p { font-size: 90%; margin: .2em; }
+  p.verse { margin-left: 3%; }
+  pre {
+    border: 1px solid #e6e6e6;
+    border-radius: 3px;
+    background-color: #f2f2f2;
+    padding: 8pt;
+    font-family: monospace;
+    overflow: auto;
+    margin: 1.2em;
+  }
+  pre.src {
+    position: relative;
+    overflow: auto;
+  }
+  pre.src:before {
+    display: none;
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    padding: 3px;
+    color: #555;
+    background-color: #f2f2f299;
+  }
+  pre.src:hover:before { display: inline; margin-top: 14px;}
+  /* Languages per Org manual */
+  pre.src-asymptote:before { content: 'Asymptote'; }
+  pre.src-awk:before { content: 'Awk'; }
+  pre.src-authinfo::before { content: 'Authinfo'; }
+  pre.src-C:before { content: 'C'; }
+  /* pre.src-C++ doesn't work in CSS */
+  pre.src-clojure:before { content: 'Clojure'; }
+  pre.src-css:before { content: 'CSS'; }
+  pre.src-D:before { content: 'D'; }
+  pre.src-ditaa:before { content: 'ditaa'; }
+  pre.src-dot:before { content: 'Graphviz'; }
+  pre.src-calc:before { content: 'Emacs Calc'; }
+  pre.src-emacs-lisp:before { content: 'Emacs Lisp'; }
+  pre.src-fortran:before { content: 'Fortran'; }
+  pre.src-gnuplot:before { content: 'gnuplot'; }
+  pre.src-haskell:before { content: 'Haskell'; }
+  pre.src-hledger:before { content: 'hledger'; }
+  pre.src-java:before { content: 'Java'; }
+  pre.src-js:before { content: 'Javascript'; }
+  pre.src-latex:before { content: 'LaTeX'; }
+  pre.src-ledger:before { content: 'Ledger'; }
+  pre.src-lisp:before { content: 'Lisp'; }
+  pre.src-lilypond:before { content: 'Lilypond'; }
+  pre.src-lua:before { content: 'Lua'; }
+  pre.src-matlab:before { content: 'MATLAB'; }
+  pre.src-mscgen:before { content: 'Mscgen'; }
+  pre.src-ocaml:before { content: 'Objective Caml'; }
+  pre.src-octave:before { content: 'Octave'; }
+  pre.src-org:before { content: 'Org mode'; }
+  pre.src-oz:before { content: 'OZ'; }
+  pre.src-plantuml:before { content: 'Plantuml'; }
+  pre.src-processing:before { content: 'Processing.js'; }
+  pre.src-python:before { content: 'Python'; }
+  pre.src-R:before { content: 'R'; }
+  pre.src-ruby:before { content: 'Ruby'; }
+  pre.src-sass:before { content: 'Sass'; }
+  pre.src-scheme:before { content: 'Scheme'; }
+  pre.src-screen:before { content: 'Gnu Screen'; }
+  pre.src-sed:before { content: 'Sed'; }
+  pre.src-sh:before { content: 'shell'; }
+  pre.src-sql:before { content: 'SQL'; }
+  pre.src-sqlite:before { content: 'SQLite'; }
+  /* additional languages in org.el's org-babel-load-languages alist */
+  pre.src-forth:before { content: 'Forth'; }
+  pre.src-io:before { content: 'IO'; }
+  pre.src-J:before { content: 'J'; }
+  pre.src-makefile:before { content: 'Makefile'; }
+  pre.src-maxima:before { content: 'Maxima'; }
+  pre.src-perl:before { content: 'Perl'; }
+  pre.src-picolisp:before { content: 'Pico Lisp'; }
+  pre.src-scala:before { content: 'Scala'; }
+  pre.src-shell:before { content: 'Shell Script'; }
+  pre.src-ebnf2ps:before { content: 'ebfn2ps'; }
+  /* additional language identifiers per "defun org-babel-execute"
+       in ob-*.el */
+  pre.src-cpp:before  { content: 'C++'; }
+  pre.src-abc:before  { content: 'ABC'; }
+  pre.src-coq:before  { content: 'Coq'; }
+  pre.src-groovy:before  { content: 'Groovy'; }
+  /* additional language identifiers from org-babel-shell-names in
+     ob-shell.el: ob-shell is the only babel language using a lambda to put
+     the execution function name together. */
+  pre.src-bash:before  { content: 'bash'; }
+  pre.src-csh:before  { content: 'csh'; }
+  pre.src-ash:before  { content: 'ash'; }
+  pre.src-dash:before  { content: 'dash'; }
+  pre.src-ksh:before  { content: 'ksh'; }
+  pre.src-mksh:before  { content: 'mksh'; }
+  pre.src-posh:before  { content: 'posh'; }
+  /* Additional Emacs modes also supported by the LaTeX listings package */
+  pre.src-ada:before { content: 'Ada'; }
+  pre.src-asm:before { content: 'Assembler'; }
+  pre.src-caml:before { content: 'Caml'; }
+  pre.src-delphi:before { content: 'Delphi'; }
+  pre.src-html:before { content: 'HTML'; }
+  pre.src-idl:before { content: 'IDL'; }
+  pre.src-mercury:before { content: 'Mercury'; }
+  pre.src-metapost:before { content: 'MetaPost'; }
+  pre.src-modula-2:before { content: 'Modula-2'; }
+  pre.src-pascal:before { content: 'Pascal'; }
+  pre.src-ps:before { content: 'PostScript'; }
+  pre.src-prolog:before { content: 'Prolog'; }
+  pre.src-simula:before { content: 'Simula'; }
+  pre.src-tcl:before { content: 'tcl'; }
+  pre.src-tex:before { content: 'TeX'; }
+  pre.src-plain-tex:before { content: 'Plain TeX'; }
+  pre.src-verilog:before { content: 'Verilog'; }
+  pre.src-vhdl:before { content: 'VHDL'; }
+  pre.src-xml:before { content: 'XML'; }
+  pre.src-nxml:before { content: 'XML'; }
+  /* add a generic configuration mode; LaTeX export needs an additional
+     (add-to-list 'org-latex-listings-langs '(conf " ")) in .emacs */
+  pre.src-conf:before { content: 'Configuration File'; }
+
+  table { border-collapse:collapse; }
+  caption.t-above { caption-side: top; }
+  caption.t-bottom { caption-side: bottom; }
+  td, th { vertical-align:top;  }
+  th.org-right  { text-align: center;  }
+  th.org-left   { text-align: center;   }
+  th.org-center { text-align: center; }
+  td.org-right  { text-align: right;  }
+  td.org-left   { text-align: left;   }
+  td.org-center { text-align: center; }
+  dt { font-weight: bold; }
+  .footpara { display: inline; }
+  .footdef  { margin-bottom: 1em; }
+  .figure { padding: 1em; }
+  .figure p { text-align: center; }
+  .equation-container {
+    display: table;
+    text-align: center;
+    width: 100%;
+  }
+  .equation {
+    vertical-align: middle;
+  }
+  .equation-label {
+    display: table-cell;
+    text-align: right;
+    vertical-align: middle;
+  }
+  .inlinetask {
+    padding: 10px;
+    border: 2px solid gray;
+    margin: 10px;
+    background: #ffffcc;
+  }
+  #org-div-home-and-up
+   { text-align: right; font-size: 70%; white-space: nowrap; }
+  textarea { overflow-x: auto; }
+  .linenr { font-size: smaller }
+  .code-highlighted { background-color: #ffff00; }
+  .org-info-js_info-navigation { border-style: none; }
+  #org-info-js_console-label
+    { font-size: 10px; font-weight: bold; white-space: nowrap; }
+  .org-info-js_search-highlight
+    { background-color: #ffff00; color: #000000; font-weight: bold; }
+  .org-svg { }
+</style>
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+        displayAlign: "center",
+        displayIndent: "0em",
+
+        "HTML-CSS": { scale: 100,
+                        linebreaks: { automatic: "false" },
+                        webFont: "TeX"
+                       },
+        SVG: {scale: 100,
+              linebreaks: { automatic: "false" },
+              font: "TeX"},
+        NativeMML: {scale: 100},
+        TeX: { equationNumbers: {autoNumber: "AMS"},
+               MultLineWidth: "85%",
+               TagSide: "right",
+               TagIndent: ".8em"
+             }
+});
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS_HTML"></script>
+</head>
+<body>
+<div id="content" class="content">
+<h1 class="title">Random tricks for computing costly sums</h1>
+<p class="verse">
+<i>De la mesure en toute chose : ni trop, ni trop peu !</i><sup><a id="fnr.1" class="footref" href="#fn.1" role="doc-backlink">1</a></sup><br />
+&#xa0;&#xa0;&#x2014; Lieutenant-Colonel Dulac<br />
+</p>
+
+
+
+<div id="outline-container-sec:introduction" class="outline-2">
+<h2 id="sec:introduction"><span class="section-number-2">1.</span> Introduction</h2>
+<div class="outline-text-2" id="text-sec:introduction">
+<p>
+It amazes me how many analytical tasks reduce to estimating some big sum or integral.
+That may mean calculating probabilities or expectations, aggregating zonal statistics across a landscape,
+measuring carbon stocks in a project area, averaging telemetry data, etc.
+Another frequent use case in scientific computing is estimating how long some computation would take if carried out exhaustively.
+Summation is particularly challenging when the terms of the sum are costly to compute and/or when the set of terms is large or infinite,
+as in the case for continuous integrals and probabilistic calculations.
+</p>
+
+<p>
+This article aims to show you techniques for <b>estimating costly sums approximately, through the use of random sub-samples</b> of the terms.
+We will start with the basic case of uniform sub-samples of a finite discrete set of terms, which we will summarize here by:
+</p>
+
+\begin{equation}
+\label{org7d4e772}
+    \sum_{x \in \mathcal{X}}{f(x)} \overset{\mathbb{E}}{\approx} \frac{|\mathcal{X}|}{n} \sum_{j=1}^n{f(X_j)}
+\end{equation}
+
+<p>
+We will then study more refined sub-sampling schemes, yielding estimators of increasing
+efficiency and applicability, thus adapting to situations in which the <b><i>cost structure</i> of the computation</b> is more and more challenging.
+This process will walk us through typical methods like Importance Sampling and stratification,
+and culminate at viewing the sub-sample \((X_j)_j\) as a <i>random measure</i> and considering its <i>expectation measure</i> \(\nu\), at which point equation \eqref{org7d4e772} will have been generalized to:
+</p>
+
+\begin{equation}
+\label{org6c09faa}
+    \int_{x \in \mathcal{X}}{f(x) d\mu(x)} \overset{\mathbb{E}}{\approx} \sum_j{\frac{d\nu}{d\mu}(X_j)^{-1} f(X_j)}
+\end{equation}
+
+<p>
+in which the weight \(\frac{d\nu}{d\mu}(X_j)^{-1}\) compensates for how the sampling procedure <i>over-represents</i> \(X_j\) compared to the "natural" measure \(\mu\).
+Equation \eqref{org6c09faa} is the key to mechanically <b>deriving the appropriate estimator for essentially <i>any</i> sub-sampling scheme.</b>
+</p>
+
+<p>
+Readers uninterested in this level of abstraction are encouraged to pick and choose among the more concrete embodiments of equation \eqref{org6c09faa}.
+Equations \eqref{org31d1d44}, \eqref{org5661861}, \eqref{org95735c6}, \eqref{org0e22f27} and \eqref{org4d0939e} are useful checkpoints.
+</p>
+
+<p>
+My main goal in this article is reducing computational costs and getting answers faster. 
+However, some readers may also enjoy the little tour of measure theory and probability theory that we will take along the way.
+</p>
+
+<p>
+<span class="underline">Mathematical notation:</span> \(\mathbb{E}[Z]\) denotes the expectation of random variable \(Z\); \(\text{Var}[Z]\) is its variance.
+\(A \overset{\mathbb{E}}{\approx} B\) is a shorthand for saying that \(A\) and \(B\) are equal in expectation, i.e. \(\mathbb{E}[A] = \mathbb{E}[B]\).
+\(|\mathcal{X}|\) denotes the number of elements in set \(\mathcal{X}\). \(A := B\) means that \(A\) is defined as \(B\).
+\((X_j)_{j=1}^n\) - sometimes abbreviated to \((X_j)_j\) - represents a collection (in this article, a random sample) of size \(n\) indexed by \(j\) - in plain English, \(X_j\) is the \(j-th\) element of \((X_j)_j\).
+</p>
+
+<p>
+<i>(Note: if the math formulas display poorly in your web browser, try right-clicking a formula &gt; Math Settings &gt; Math Renderer &gt; Common HTML).</i>
+</p>
+
+<div id="table-of-contents" role="doc-toc">
+<h2>Table of Contents</h2>
+<div id="text-table-of-contents" role="doc-toc">
+<ul>
+<li><a href="#sec:introduction">1. Introduction</a></li>
+<li><a href="#sec:goal-discrete-sum">2. Goal: estimating a big costly sum</a></li>
+<li><a href="#sec:iid-uniform-sample">3. Using a random sub-sample</a></li>
+<li><a href="#sec:other-uniform-samples">4. Other uniform sampling schemes</a></li>
+<li><a href="#sec:weighted-samples">5. Weighted samples</a>
+<ul>
+<li><a href="#sec:importance-sampling-discrete">5.1. Importance Sampling</a></li>
+<li><a href="#sec:stratification-discrete">5.2. Stratification</a></li>
+</ul>
+</li>
+<li><a href="#sec:unification-discrete">6. Unification: the expected frequency of the sampling procedure</a>
+<ul>
+<li><a href="#sec:example-merging-samples">6.1. Example 1: merging weighted samples</a></li>
+<li><a href="#sec:example-tiled-geospatial">6.2. Example 2: tiled geospatial data</a></li>
+<li><a href="#sec:discrete-unification-expected-frequency">6.3. The expected frequency mass function</a></li>
+<li><a href="#sec:variance-in-general">6.4. What about variance?</a></li>
+</ul>
+</li>
+<li><a href="#sec:general-integration">7. General integration and expectation measure</a>
+<ul>
+<li><a href="#sec:general-integrals-reweighting-trick">7.1. General integrals and the reweighting trick</a></li>
+<li><a href="#sec:sub-sample-as-random-measure">7.2. The sub-sample as a random measure</a></li>
+<li><a href="#sec:estimating-general-integrals">7.3. Estimating general integrals</a></li>
+</ul>
+</li>
+<li><a href="#sec:estimating-continuous-integrals">8. Application: estimating continuous integrals</a></li>
+<li><a href="#sec:estimating-probabilistic-expectations">9. Application: expected value of (other) probability distributions</a>
+<ul>
+<li><a href="#sec:new-look-at-sample-mean">9.1. A new look at the sample mean</a></li>
+<li><a href="#sec:importance-sampling-general">9.2. Importance Sampling and Likelihood Ratio Estimator</a></li>
+</ul>
+</li>
+<li><a href="#sec:beyond-point-samples">10. Beyond point samples</a>
+<ul>
+<li><a href="#sec:random-integrals">10.1. Random integrals</a></li>
+<li><a href="#sec:example-firebrands">10.2. Example: damage from firebrands in wildfire simulations</a></li>
+</ul>
+</li>
+<li><a href="#sec:summary">11. Summary</a></li>
+<li><a href="#org68cf049">12. Parting thoughts</a></li>
+<li><a href="#sec:further-reading">13. Further reading</a></li>
+<li><a href="#sec:references">14. References</a></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec:goal-discrete-sum" class="outline-2">
+<h2 id="sec:goal-discrete-sum"><span class="section-number-2">2.</span> Goal: estimating a big costly sum</h2>
+<div class="outline-text-2" id="text-sec:goal-discrete-sum">
+<p>
+I will assume that our goal is to estimate approximately the value \(S\) of summing \(f(x)\) for \(x\) ranging over a large set \(\mathcal{X}\):
+</p>
+
+\begin{equation}
+\label{org2fba7dc}
+    S := \sum_{x \in \mathcal{X}}{f(x)}
+\end{equation}
+
+<p>
+The assumptions are that:
+</p>
+
+<ol class="org-ol">
+<li>\(f(x)\) is costly to evaluate, so that it would be prohibitively expensive to compute \(S\) exactly.</li>
+<li>\(\mathcal{X}\) is a large discrete set that we can enumerate quickly enough: \(\mathcal{X} = \left\{x_1, x_2, \dots \right\}\). (We'll relax this assumption later, see section <a href="#sec:general-integration">7</a>.)</li>
+<li>It's fine to do an approximate estimate of \(S\) - typically, \(f(x)\) itself is an approximation.</li>
+</ol>
+</div>
+</div>
+
+
+<div id="outline-container-sec:iid-uniform-sample" class="outline-2">
+<h2 id="sec:iid-uniform-sample"><span class="section-number-2">3.</span> Using a random sub-sample</h2>
+<div class="outline-text-2" id="text-sec:iid-uniform-sample">
+<p>
+The main idea of this article is: <b>we can estimate \(S\) by drawing a random sub-sample</b>, yielding a cheaper computation.
+In the most basic form, we will use a <i>uniform i.i.d.</i> sub-sample:
+that is, we will randomly sample \(n\) values \(\left(X_j\right)_{j=1}^{n}\), by drawing \(n\) times with replacement from \(\mathcal{X}\):
+each \(x \in \mathcal{X}\) has the same (hence "uniform") probability \(1/|\mathcal{X}|\) of being drawn at each iteration,
+and the iterations are performed indenpendently (hence "i.i.d.", for <i>Independent and Identically Distributed</i>).
+</p>
+
+<p>
+Having drawn the sample \(\left(X_{j}\right)_j\), we can estimate \(S\) by using formula:
+</p>
+
+\begin{equation}
+\label{org31d1d44}
+    S \overset{\mathbb{E}}{\approx} \hat{S} := \frac{|\mathcal{X}|}{n} \sum_{j}{f(X_j)}
+\end{equation}
+
+
+<p>
+Equation \eqref{org31d1d44} is akin to estimating an expectation using the sample mean.
+\(\hat{S} \overset{\mathbb{E}}{\approx} S\) means that \(\hat{S}\) is an unbiased estimator of \(S\), that is \(\mathbb{E}\left[\hat{S}\right] = S\).
+What's more, the Law of Large Numbers tells us that this estimate becomes more precise as \(n\) is made large.
+More specifically, the Central Limit Theorem tells us that the estimation error approximately follows a Gaussian distribution, and has standard deviation proportional to \(n^{- 1/2}\):
+</p>
+
+\begin{equation}
+\label{org77b9cae}
+    \text{Var}\left[\hat{S}\right] = \frac{|\mathcal{X}|^2}{n}\text{Var}\left[f(X_1)\right]
+\end{equation}
+</div>
+</div>
+
+
+<div id="outline-container-sec:other-uniform-samples" class="outline-2">
+<h2 id="sec:other-uniform-samples"><span class="section-number-2">4.</span> Other uniform sampling schemes</h2>
+<div class="outline-text-2" id="text-sec:other-uniform-samples">
+<p>
+In the previous sections, we drew the sample \(\left(X_j\right)_{j=1}^{n}\) uniformly with replacement.
+However, we could also have used other sampling strategies, for example:
+</p>
+
+<ol class="org-ol">
+<li><b>sampling without replacement,</b> which can be achieved by shuffling \(\mathcal{X} = \left\{x_1, x_2, \dots \right\}\) to random order and picking the first \(n\) elements.</li>
+<li><b>Bernoulli sampling:</b> we iterate over \(x \in \mathcal{X}\) and independently pick \(x\) with probability \(n/|\mathcal{X}|\). In this sampling scheme, the sample size becomes a random variable \(\hat{n}\) (in fact, it is binomial-distributed).</li>
+<li><b>Poisson sampling:</b> in this sampling scheme, the sample size is a random variable \(\hat{n}\) drawn as a Poisson distribution \(\hat{n} \sim \text{Poisson}(\lambda = n)\), and given \(\hat{n}\) the \((X_j)_{j=1}^{\hat{n}}\) are drawn i.i.d. with replacement.</li>
+<li><b>Poisson sampling (elementwise version):</b> non-trivially, the above sampling scheme is equivalent to iterating over \(x \in \mathcal{X}\) and picking \(x\) zero or more times, the number of times \(\hat{n}_x\) being Poisson-distributed: \(\hat{n}_x \sim \text{Poisson}(\lambda = n/|\mathcal{X}|)\).</li>
+</ol>
+
+<p>
+To make things concrete, here is an example of SQL code implementing Bernoulli sampling:
+</p>
+
+<div class="org-src-container">
+<pre class="src src-SQL" id="org921c91a">WITH agg AS (
+    SELECT
+	1e3 AS exp_sample_size, -- This is where you configure the desired sample size.
+	COUNT(*) AS n_elements
+    FROM my_table
+)
+SELECT
+    x.*
+FROM my_table AS x -- This table represents the entire space from which we sample.
+, LATERAL (
+    SELECT
+	(exp_sample_size / n_elements) AS selection_prob
+    FROM agg
+) AS t_selprob
+, LATERAL (
+    WITH random_draw AS (
+	SELECT
+	    x.*, -- In some database engines, this is necessary to force one independent random trial per element.
+	    random() AS rand
+    )
+    SELECT WHERE (rand &lt; selection_prob) -- This is where random sampling happens.
+) AS t_draw
+</pre>
+</div>
+
+<p>
+For now, I will leave you to marvel at the following fact: even though they are quite different in their sampling procedure, <b>all of these sampling schemes share the same estimator formula</b>, given by equation \eqref{org31d1d44}.
+By the end of this article, we will have explained this apparent coincidence.
+</p>
+
+<p>
+Aside from having the same expected value, each these estimator has its own strengths, differing slightly in variance and computational convenience:
+</p>
+<ol class="org-ol">
+<li>Sampling without replacement has the lowest variance, although the difference is insignificant when \(n \ll |\mathcal{X}|\).</li>
+<li>Bernoulli sampling can be convenient to implement.</li>
+<li>Poisson sampling tends to be the simplest to reason about. It preserves its property through many transformations. For example, merging two independent Poisson samples of expected sizes \(N_1\) and \(N_2\) yields a Poisson sample of expected size \(N_1 + N_2\).</li>
+<li>Both Bernoulli and Poisson sampling can be easily parallelized over a partition of \(\mathcal{X}\). They can also be thinned into smaller sub-samples while preserving their properties.</li>
+</ol>
+
+<p>
+The precision characteristics of these estimators are summarized in table <a href="#orgee08771">1</a>:
+</p>
+
+<table id="orgee08771" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 1:</span> Precision characteristics of uniform sampling schemes. \(\hat{S}\) is the estimator defined in equation \eqref{org31d1d44}. The Coefficient of Variation (CV) provides a measure of relative error.</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Sampling scheme</th>
+<th scope="col" class="org-left">\(\text{Var}\left[\hat{S}\right]^{1/2}/\lvert S \rvert:\) Coefficient of Variation (CV)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">With replacement</td>
+<td class="org-left">\(n^{- 1/2} \left( \frac{\overline{f^2}}{\overline{f}^2} - 1 \right)^{1/2}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Without replacement</td>
+<td class="org-left">\(n^{- 1/2} \left( \frac{\overline{f^2}}{\overline{f}^2} - 1 \right)^{1/2} \left(1 - \frac{n - 1}{\lvert\mathcal{X}\rvert - 1}\right)^{1/2}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Bernoulli</td>
+<td class="org-left">\(n^{- 1/2} \left( \frac{\overline{f^2}}{\overline{f}^2} \right)^{1/2} \left(1 - \frac{n}{\lvert\mathcal{X}\rvert}\right)^{1/2}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Poisson</td>
+<td class="org-left">\(n^{- 1/2} \left( \frac{\overline{f^2}}{\overline{f}^2} \right)^{1/2}\)</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+in which \(\overline{f}\) and \(\overline{f^2}\) respectively denote the population averages of \(f(x)\) and \(f(x)^2\):
+</p>
+
+\begin{align*}
+    \overline{f} &:= \frac{1}{\lvert\mathcal{X}\rvert} \sum_{x}{f(x)} \\
+    \overline{f^2} &:= \frac{1}{\lvert\mathcal{X}\rvert} \sum_{x}{f(x)^2}
+\end{align*}
+</div>
+</div>
+
+
+<div id="outline-container-sec:weighted-samples" class="outline-2">
+<h2 id="sec:weighted-samples"><span class="section-number-2">5.</span> Weighted samples</h2>
+<div class="outline-text-2" id="text-sec:weighted-samples">
+</div>
+
+<div id="outline-container-sec:importance-sampling-discrete" class="outline-3">
+<h3 id="sec:importance-sampling-discrete"><span class="section-number-3">5.1.</span> Importance Sampling</h3>
+<div class="outline-text-3" id="text-sec:importance-sampling-discrete">
+<p>
+The <i>uniform</i> estimators discussed above are a good start, but they can fall short of being precise.
+This happens in particular in "needle in a haystack" situations where the sum is highly imbalanced, the vast majority of the terms \(f(x)\) contributing negligibly to the sum \(S\).
+Then the variance is high, and a very high sample size is needed to achieve good precision.
+</p>
+
+<p>
+In such cases, it pays to oversample the terms \(x\) that are most likely to contribute significantly to the sum.
+This is the principle of <i>Importance Sampling</i>, in which the \(x\) are drawn with different selection probabilities,
+and the sum is weighted to compensate for the bias this introduces.
+</p>
+
+<p>
+Concretely, we draw the sample \(\left(X_j\right)_j\) i.i.d. but not uniformly: each \(x \in \mathcal{X}\) has a probability \(p(x)\) of being selected (\(p(\cdot)\) is called the <i>proposal distribution</i>).
+The estimator is then:
+</p>
+
+\begin{equation}
+\label{org5661861}
+    \hat{S}_p := \frac{1}{n} \sum_{j}{\frac{1}{p(X_j)} f(X_j)}
+\end{equation}
+
+<p>
+This is also an unbiased estimator: \(\hat{S}_p \overset{\mathbb{E}}{\approx} S\), which is easily verified as follows:
+</p>
+
+\begin{align*}
+    \mathbb{E}\left[\hat{S}_p\right] = \frac{n}{n} \mathbb{E}\left[\frac{1}{p(X_1)} f(X_1)\right] = \sum_{x}{p(x) \frac{1}{p(x)} f(x)} = S
+\end{align*}
+
+<p>
+What can make \(\hat{S}_p\) more interesting than \(\hat{S}\) is its precision characteristics. The lowest possible variance is achieved when \(p(x)\) is proportional to \(|f(x)|\).
+This optimum is typically impossible to achieve (you'd have to compute \(\sum_x{|f(x)|}\))
+but usually you can rely on some heuristic pointing you to a small subset of \(\mathcal{X}\) where most of the sum is concentrated.
+</p>
+
+<p>
+As before, other sampling schemes can be used to draw the sample \(\left(X_j\right)_j\).
+The proposal distribution \(p(x)\) can be used to draw without replacement.
+Bernoulli sampling can also be used with some non-constant selection probability function \(q(x) \in (0; 1]\), and the formula becomes:
+</p>
+
+\begin{equation}
+\label{orgffa4bf4}
+    \hat{S}_B := \sum_{j}{\frac{1}{q(X_j)} f(X_j)}
+\end{equation}
+
+<p>
+Equation \eqref{orgffa4bf4} also works in an Poisson sampling scheme, in which the number of repetitions of \(x\) in the sample follows \(\text{Poisson}(\lambda = q(x))\), in which case \(q(x) > 1\) is allowed.
+</p>
+
+<p>
+Anticipating the next sections, we encourage readers to think of \(q(x)\) and \(n p(x)\) as the <i>expected number of times</i> that \(x\) is selected.
+</p>
+
+<p>
+Table <a href="#org08e2616">2</a> describe the variance of these estimators, and how it can be estimated from the sample:
+</p>
+
+<table id="org08e2616" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 2:</span> Variance of estimators from various weighted sampling schemes. The rightmost column is an unbiased estimator of \(\text{Var}\left[\hat{S}\right]\).</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Sampling scheme</th>
+<th scope="col" class="org-left">\(\text{Var}\left[\hat{S}\right]\)</th>
+<th scope="col" class="org-left">Variance estimator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">With replacement</td>
+<td class="org-left">\(\frac{1}{n} \text{Var}\left[ \frac{1}{p(X_1)}f(X_1) \right]\)</td>
+<td class="org-left">\(\frac{1}{n-1} \left( \left(\sum_j{\frac{1}{p(X_j)}f(X_j)^2} \right) - \hat{S}^2 \right)\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Without replacement</td>
+<td class="org-left">\(\frac{1}{n} \text{Var}\left[ \frac{1}{p(X_1)}f(X_1) \right] \left(1 - \frac{n-1}{\lvert X \rvert - 1}\right)\)</td>
+<td class="org-left">\(\frac{1}{n-1} \left( \left(\sum_j{\frac{1}{p(X_j)}f(X_j)^2} \right) - \hat{S}^2 \right) \left(1 - \frac{n-1}{\lvert X \rvert - 1}\right)\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Bernoulli</td>
+<td class="org-left">\(\sum_x{\frac{1 - q(x)}{q(x)} f(x)^2}\)</td>
+<td class="org-left">\(\sum_j{\frac{1 - q(X_j)}{q(X_j)^2} f(X_j)^2}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">Poisson</td>
+<td class="org-left">\(\sum_x{\frac{1}{q(x)} f(x)^2}\)</td>
+<td class="org-left">\(\sum_j{\frac{1}{q(X_j)^2} f(X_j)^2}\)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+<div id="outline-container-sec:stratification-discrete" class="outline-3">
+<h3 id="sec:stratification-discrete"><span class="section-number-3">5.2.</span> Stratification</h3>
+<div class="outline-text-3" id="text-sec:stratification-discrete">
+<p>
+Stratified estimation is an estimation technique with similar characteristics to Importance Sampling: we sample more densely in some parts of the space than others.
+The idea is to partition \(\mathcal{X}\) into \(K\) disjoint strata \(\mathcal{X}_1, \mathcal{X}_2, \dots, \mathcal{X}_K\):
+</p>
+
+\begin{equation}
+\label{org71824a1}
+    \mathcal{X} = \mathcal{X}_1 \uplus \mathcal{X}_2 \uplus \dots \uplus \mathcal{X}_K
+\end{equation}
+
+<p>
+In each stratum \(\mathcal{X}_k\), we draw a sample \(\left(X_{kj}\right)_{j=1}^{n_k}\) of size \(n_k\).
+Typically, we'll have at least one stratum \(k\) which we expect to contain most of the large \(f(x)\) terms, and sample abundantly from it even though it makes from a small subset of \(\mathcal{X}\).
+</p>
+
+<p>
+The corresponding estimator is then:
+</p>
+
+\begin{equation}
+\label{org95735c6}
+    \hat{S}_\text{strat} := \sum_{k=1}^{K}{\frac{|\mathcal{X}_k|}{n_k} \sum_{j=1}^{n_k}{f(X_{kj})}}
+\end{equation}
+
+<p>
+Because strata are sampled independently, the variance of \(\hat{S}_\text{strat}\) is simply the sum of the per-stratum variances:
+</p>
+
+\begin{equation}
+\label{org7266da9}
+    \text{Var}\left[\hat{S}_\text{strat}\right] = \sum_{k=1}^{K}{\text{Var}\left[\hat{S}_k\right]}
+\end{equation}
+
+<p>
+Stratified estimation can be further refined by using the ideas of previous sections within each stratum.
+At which point, our list of estimators is starting to look like a zoo. It's time for some unification.
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec:unification-discrete" class="outline-2">
+<h2 id="sec:unification-discrete"><span class="section-number-2">6.</span> Unification: the expected frequency of the sampling procedure</h2>
+<div class="outline-text-2" id="text-sec:unification-discrete">
+</div>
+
+<div id="outline-container-sec:example-merging-samples" class="outline-3">
+<h3 id="sec:example-merging-samples"><span class="section-number-3">6.1.</span> Example 1: merging weighted samples</h3>
+<div class="outline-text-3" id="text-sec:example-merging-samples">
+<p>
+We have seen how to estimate \(S\) using a small sub-sample of terms, and how to make the most of the sample size using weighted sampling schemes. How could we possibly want more?
+Well, here's one situation where we could want more.
+Suppose that you used Importance Sampling with sample size \(N_1\) and proposal distribution \(p_1(x)\).
+Then your colleague Meryem tells you that <i>she</i> used Bernoulli sampling with selection probability \(q_2(x)\).
+It would be a shame not to combine your samples to get better precision, wouldn't it? Spoiler alert, here's how to do it:
+</p>
+
+\begin{equation}
+    \hat{S}_{1 \cup 2} := \sum_j{\frac{1}{N_1 p_1(X_{j}) + q_2(X_{j})}f(X_{j})}
+\end{equation}
+
+<p>
+in which the sum iterates over your merged samples. I will not bother to prove that this works in this particular use case - we will soon see a general result that will make this sort of formula obvious.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:example-tiled-geospatial" class="outline-3">
+<h3 id="sec:example-tiled-geospatial"><span class="section-number-3">6.2.</span> Example 2: tiled geospatial data</h3>
+<div class="outline-text-3" id="text-sec:example-tiled-geospatial">
+<p>
+As another example, imagine that you are dealing with high-resolution geospatial data spanning all of India.
+Your data consists of rasters with 30m pixels: \(\mathcal{X}\) is the set of pixels and \(f(x)\) consists of computing the average distance of \(x\) to an urban area.
+No single file can contain so many pixels, and so the data is split in 60km square tiles, one raster file per tile.
+</p>
+
+<p>
+This is an example where the <i>cost structure</i> of your computation is too complicated for the previous estimators to be useful.
+You cannot just scatter the sample all over the landscape. Instead, you'll want to use a <i>multi-stage</i> sampling scheme:
+first sample a subset of tiles, and <i>then</i> maybe sub-sample the pixels within each tile.
+</p>
+
+<p>
+This time I won't show you the formula - can you come up with an estimator that works?
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:discrete-unification-expected-frequency" class="outline-3">
+<h3 id="sec:discrete-unification-expected-frequency"><span class="section-number-3">6.3.</span> The expected frequency mass function</h3>
+<div class="outline-text-3" id="text-sec:discrete-unification-expected-frequency">
+<p>
+The first step towards unifying the previous results is to notice that all the estimators we studied above can be written in the form:
+</p>
+
+\begin{equation}
+\label{org0e22f27}
+    S \overset{\mathbb{E}}{\approx} \hat{S} = \sum_{j}{\frac{1}{\nu(X_j)} f(X_j)}
+\end{equation}
+
+<p>
+in which \(\nu(x)\) is the expected number of times that \(x\) is selected in the sample:
+</p>
+
+\begin{equation}
+\label{orgfbd389f}
+    \nu(x) := \mathbb{E}\left[\hat{n}_x\right]
+\end{equation}
+
+<p>
+\(\nu(\cdot)\) might be described as the "expected count" function; I will call it the <b><i>expected frequency mass function</i></b>.
+</p>
+
+<p>
+The proof to equation \eqref{org0e22f27} is elementary:
+</p>
+
+\begin{align*}
+    \mathbb{E}\left[\hat{S}\right] &= \mathbb{E}\left[\sum_{x}{\sum_{j | X_j = x}{\frac{1}{\nu(X_j)} f(X_j)}}\right] \\
+    &= \mathbb{E}\left[\sum_{x}{\frac{1}{\nu(x)} f(x) \sum_{j | X_j = x}{1}}\right] \\
+    &= \mathbb{E}\left[\sum_{x}{\frac{1}{\nu(x)} f(x) \hat{n}_x}\right] \\
+    &= \sum_{x}{\frac{1}{\nu(x)} f(x) \mathbb{E}\left[\hat{n}_x\right]} \\
+    &= \sum_{x}{\frac{1}{\nu(x)} f(x) \nu(x)} \\
+    &= \sum_{x}{f(x)} \\
+    \mathbb{E}\left[\hat{S}\right] &= S
+\end{align*}
+
+<p>
+Equation \eqref{org0e22f27} gives us a <b>general and versatile method for estimating sums:</b>
+</p>
+
+<ol class="org-ol">
+<li>Design a sub-sampling scheme that fits your problem. Your intuition probably has good approaches to suggest, and you can also use some of the techniques listed above, like Importance Sampling or Stratified Estimation.</li>
+<li>Find the expected frequency mass function \(\nu(x)\) that corresponds to your sub-sampling scheme.</li>
+<li>Draw a random sample \(\left(X_j\right)_j\) from your sub-sampling scheme.</li>
+<li>Compute and record \(\left(f(X_j)\right)_j\).</li>
+<li>Estimate the sum by applying equation \eqref{org0e22f27}.</li>
+</ol>
+</div>
+</div>
+
+
+<div id="outline-container-sec:variance-in-general" class="outline-3">
+<h3 id="sec:variance-in-general"><span class="section-number-3">6.4.</span> What about variance?</h3>
+<div class="outline-text-3" id="text-sec:variance-in-general">
+<p>
+Unfortunately, there is no general formula for the variance of the estimator defined in equation \eqref{org0e22f27}.
+The variance will depend on the specifics of the sampling procedure; it's possible to contrive sampling procedures of arbitrarily bad variance,
+by not sampling densely in the important parts of the space and/or by making samples highly correlated.
+The variance will have to be worked out specifically for each sampling procedure, which can usually be done by applying 
+basic mathematical properties of variance: variance responds quadratically to scaling (\(\text{Var}[\lambda Y] = \lambda^2 \text{Var}[Y]\)), 
+is additive on <i>independent</i> random variables (\(\text{Var}[Y_1 + Y_2] = \text{Var}[Y_1] + \text{Var}[Y_2]\)),
+can be expressed from moments (\(\text{Var}[Y] = \mathbb{E}[Y^2] - \mathbb{E}[Y]^2 = \mathbb{E}[(Y - \mathbb{E}[Y])^2]\)).
+</p>
+
+<p>
+In addition, the <i>conditional variance formula</i> is useful for multi-stage sampling schemes:
+</p>
+
+\begin{equation}
+\label{org093c7b6}
+    \text{Var}[Y] = \mathbb{E}\left[\text{Var}[Y | Z]\right] + \text{Var}\left[\mathbb{E}[Y | Z]\right]
+\end{equation}
+
+<p>
+Finally, the variance of a sum with correlated terms can be worked out from the covariances of the terms:
+</p>
+
+\begin{equation}
+\label{org4943892}
+    \text{Var}\left[ \sum_{i=1}^m{Y_i} \right] = \sum_{i,j}{\text{Cov}\left[ Y_i, Y_j \right]}
+\end{equation}
+</div>
+</div>
+</div>
+
+
+
+<div id="outline-container-sec:general-integration" class="outline-2">
+<h2 id="sec:general-integration"><span class="section-number-2">7.</span> General integration and expectation measure</h2>
+<div class="outline-text-2" id="text-sec:general-integration">
+</div>
+
+<div id="outline-container-sec:general-integrals-reweighting-trick" class="outline-3">
+<h3 id="sec:general-integrals-reweighting-trick"><span class="section-number-3">7.1.</span> General integrals and the reweighting trick</h3>
+<div class="outline-text-3" id="text-sec:general-integrals-reweighting-trick">
+<p>
+We will now make the above results applicable to a wider range of problems, like estimating continuous integrals and probabilistic expectations.
+</p>
+
+<p>
+We will need some notions from Measure Theory; this is unsurpring, since Measure Theory is essentially the mathematical theory of sums.
+Said informally, a <b>measure</b> is something that distributes of positive mass over a space \(\mathcal{X}\).
+Concretely, a <i>measure</i> \(\mu\) is a function that assigns a non-negative "mass" \(\mu(A)\) to each set \(A \subseteq \mathcal{X}\) (with some constraints of what \(A\) and \(\mu(A)\) are allowed to be, such as non-negativity, addivity, etc.).
+Furthermore, by definition of integrals, we have:
+</p>
+
+\begin{equation}
+\label{orgadf7ccf}
+    \int_{x \in A}{d\mu(x)} = \mu(A)
+\end{equation}
+
+<p>
+For example, if \(\mathcal{X} = \left\{x_1, x_2, \dots \right\}\) is a discrete set, the <i>counting measure</i> \(\kappa\) over \(\mathcal{X}\) maps each set \(A \subseteq \mathcal{X}\) to the number of elements \(x_i \in A\):
+</p>
+
+\begin{equation}
+\label{org6d0d23b}
+    \kappa(A) := |A|
+\end{equation}
+
+<p>
+As such, our discrete sum \(S\) (defined by equation \eqref{org2fba7dc}) can be rewritten as an abstract integral:
+</p>
+
+\begin{equation}
+\label{org7317578}
+    S := \sum_{x \in \mathcal{X}}{f(x)} = \int_{x \in \mathcal{X}}{f(x) d\kappa(x)}
+\end{equation}
+
+<p>
+This more general framing will prove useful when we define the estimand \(S\) to be something else than a discrete sum.
+</p>
+
+<p>
+Another example of measure is the <i>Dirac distribution</i> \(\delta_x\) at a point \(x \in \mathcal{X}\), which maps each set \(A \subseteq \mathcal{X}\) to \(1\) if \(x \in A\) and \(0\) otherwise:
+</p>
+
+\begin{equation}
+\label{orga49ab20}
+    \delta_{x}(A) := \begin{cases} 1 & \mbox{if } x \in A \\ 0 & \mbox{if } x \notin A \end{cases}
+\end{equation}
+
+<p>
+Measure theory tells us that an integral over a measure \(\mu\) can be rewritten as an integral over another measure \(\nu\), via the <b>integral reweighting trick:</b>
+</p>
+
+\begin{equation}
+\label{org5db7389}
+    \int_{x \in \mathcal{X}}{g(x) d\mu(x)} = \int_{x \in \mathcal{X}}{g(x) \frac{d\mu}{d\nu}(x) d\nu(x)}
+\end{equation}
+
+<p>
+in which \(\frac{d\mu}{d\nu}(x)\) is the <b>Radon-Nikodym derivative</b> of \(\mu\) with respect to \(\nu\). No, don't run, there's an intuitive concept behind this scary name.
+Said informally, \(\frac{d\mu}{d\nu}(x)\) is a concentration ratio: it says by what factor \(x\) is more weighted by \(\mu\) than by \(\nu\).
+Equation \eqref{org5db7389} only works if \(\nu\) <i>dominates</i> \(\mu\), which essentially means that \(\frac{d\mu}{d\nu}\) is well defined:
+formally, it means that \(\mu(A) = 0\) whenever \(\nu(A) = 0\).
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:sub-sample-as-random-measure" class="outline-3">
+<h3 id="sec:sub-sample-as-random-measure"><span class="section-number-3">7.2.</span> The sub-sample as a random measure</h3>
+<div class="outline-text-3" id="text-sec:sub-sample-as-random-measure">
+<p>
+We now apply this theory to the use of random samples.
+So far, <b>we had seen our random sample \((X_j)_j\) as a <i>point process</i></b> over \(\mathcal{X}\), that is, a random set of points in \(\mathcal{X}\) (more rigorously, a random <i>collection</i> of points, since duplicates are allowed).
+We now <b>see our random sample as a <i>random measure</i></b> \(\hat{n}_X\) over \(\mathcal{X}\), which maps each set \(A \subseteq \mathcal{X}\) to the number of sample points \(X_j\) "landing" inside \(A\):
+</p>
+
+\begin{equation}
+\label{org2a2a3fd}
+    \hat{n}_X(A) := \sum_{j | X_j \in A}{1} = \sum_{j}{\delta_{X_j}(A)}
+\end{equation}
+
+<p>
+Again, this measure-theoretic framing lets us rewrite discrete sums over the sample as abstract integrals over measure \(\hat{n}_X\):
+</p>
+
+\begin{equation}
+\label{org83b36a9}
+    \sum_j{g(X_j)} = \int_{x \in \mathcal{X}}{g(x) d\hat{n}_X(x)}
+\end{equation}
+
+<p>
+The notion of probabilistic expectation can be applied to random measures. The <i>expectation measure</i> of \(\hat{n}_X\) is the measure \(\nu\) defined as:
+</p>
+
+\begin{equation}
+\label{org2da55f9}
+    \nu(A) := \mathbb{E}\left[\hat{n}_X(A)\right]
+\end{equation}
+
+<p>
+Then, probability theory allows us to exchange the integral and expectation operators:
+</p>
+
+\begin{equation}
+\label{orgdfab63d}
+    \mathbb{E}\left[\int_{x \in \mathcal{X}}{g(x) d\hat{n}_X(x)}\right] = \int_{x \in \mathcal{X}}{g(x) d\nu(x)}
+\end{equation}
+
+<p>
+By the way, this "point process viewpoint" can make the Radon-Nikodym derivative \(\frac{d\mu}{d\nu}\) more intuitive.
+If \((X_{j})_j\) and \((X'_{j})_j\) are two point processes with expectation measures \(\nu\) and \(\nu'\), 
+then the Radon-Nikodym derivative \(\frac{d\nu'}{d\nu}(x)\) tells us <i>how much more often</i> \(x\) gets drawn in \(X'\) than in \(X\);
+or said differently, it tells us by what factor \(X'\) <i>over-represents</i> \(x\) compared to \(X\).
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:estimating-general-integrals" class="outline-3">
+<h3 id="sec:estimating-general-integrals"><span class="section-number-3">7.3.</span> Estimating general integrals</h3>
+<div class="outline-text-3" id="text-sec:estimating-general-integrals">
+<p>
+We now have all the tools we need to estimate general integrals using random samples. We no longer assume that \(\mathcal{X}\) is a discrete space.
+Instead, we assume that our estimand \(S\) is now an integral over a measure \(\mu\):
+</p>
+
+\begin{equation}
+\label{org12799a5}
+    S := \int_{x \in \mathcal{X}}{f(x) d\mu(x)}
+\end{equation}
+
+<p>
+We now draw a sample \((X_j)_j\) with an expectation measure \(\nu\) that dominates \(\mu\). By combining equations \eqref{org83b36a9}, \eqref{orgdfab63d} and \eqref{org5db7389}, we obtain an unbiased estimator of \(S\):
+</p>
+
+\begin{align*}
+    S &= \int_{x \in \mathcal{X}}{f(x) d\mu(x)} \\
+    &= \int_{x \in \mathcal{X}}{f(x) \frac{d\mu}{d\nu}(x) d\nu(x)} \\
+    &= \mathbb{E}\left[ \int_{x \in \mathcal{X}}{\frac{d\mu}{d\nu}(x) f(x) d\hat{n}_X(x)} \right] \\
+    S &= \mathbb{E}\left[ \sum_j{\frac{d\mu}{d\nu}(X_j) f(X_j)} \right]
+\end{align*}
+
+<p>
+In summary, we estimate \(S\) through the <b><i>sample-reweighting estimator</i></b> \(\hat{S}_X\):
+</p>
+
+\begin{equation}
+\label{org77807e8}
+    S \overset{\mathbb{E}}{\approx} \hat{S}_X := \sum_j{\frac{d\mu}{d\nu}(X_j) f(X_j)}
+\end{equation}
+
+<p>
+Taking a step back, we can say that we are essentially approximating the measure \(\mu\) using a weighted mixture of Dirac distributions:
+</p>
+
+\begin{equation}
+\label{org594a7de}
+    \mu \overset{\mathbb{E}}{\approx} \sum_j{\frac{d\mu}{d\nu}(X_j) \delta_{X_j}}
+\end{equation}
+
+<p>
+Let us now <b>revisit the discrete case</b> (equation \eqref{org0e22f27}) from this more general perspective.
+As we saw in equation \eqref{org7317578}, \(\mu\) is simply the counting measure \(\kappa\) over \(\mathcal{X}\), with mass function \(\kappa(x) = 1\);
+the expectation measure \(\nu\) has mass function \(\nu(x)\), so the Radon-Nikodym derivative \(\frac{d\mu}{d\nu}\) is concretely expressed as:
+</p>
+
+\begin{equation}
+\label{orgd429edf}
+    \frac{d\mu}{d\nu}(x) = \frac{1}{\nu(x)}
+\end{equation}
+
+<p>
+from which equation \eqref{org0e22f27} follows directly as a special case of equation \eqref{org77807e8}.
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec:estimating-continuous-integrals" class="outline-2">
+<h2 id="sec:estimating-continuous-integrals"><span class="section-number-2">8.</span> Application: estimating continuous integrals</h2>
+<div class="outline-text-2" id="text-sec:estimating-continuous-integrals">
+<p>
+Let us make equation \eqref{org77807e8} more concrete, by studying the case of estimating a continuous integral:
+</p>
+
+\begin{equation}
+    S := \int_{\mathcal{X}}{f(x) dx}
+\end{equation}
+
+<p>
+Assume that we sample \((X_j)_j\) from a point process which expectation distribution has a density function \(\nu_\text{DF}(x) := \frac{d\nu}{dx}(x)\).
+For example, we might sample \(n\) times from some probability density function \(p(x)\), in which case \(\nu_\text{DF}(x) = n p(x)\).
+Then the Radon-Nikodym derivative can be expressed concretely:
+</p>
+
+\begin{equation}
+    \frac{d\mu}{d\nu}(x) = \frac{dx}{d\nu}(x) = \frac{1}{\nu_\text{DF}(x)}
+\end{equation}
+
+<p>
+from which can compute the sample-reweighting estimator:
+</p>
+
+\begin{equation}
+\label{org9344aeb}
+    \hat{S}_X := \sum_j{\frac{1}{\nu_\text{DF}(X_j)} f(X_j)}
+\end{equation}
+</div>
+</div>
+
+
+<div id="outline-container-sec:estimating-probabilistic-expectations" class="outline-2">
+<h2 id="sec:estimating-probabilistic-expectations"><span class="section-number-2">9.</span> Application: expected value of (other) probability distributions</h2>
+<div class="outline-text-2" id="text-sec:estimating-probabilistic-expectations">
+</div>
+
+
+<div id="outline-container-sec:new-look-at-sample-mean" class="outline-3">
+<h3 id="sec:new-look-at-sample-mean"><span class="section-number-3">9.1.</span> A new look at the sample mean</h3>
+<div class="outline-text-3" id="text-sec:new-look-at-sample-mean">
+<p>
+A common use case is to estimate some expected value. We now assume that the estimand \(S\) is the expected value of \(f(X)\) in which \(X\) follows a probability distribution with density \(p(x)\):
+</p>
+
+\begin{equation}
+    S := \mathbb{E}\left[f(X)\right] = \int_{x \in \mathcal{X}}{f(x) p(x) dx}
+\end{equation}
+
+<p>
+The most common to estimate \(S\) is to draw an i.i.d. sample \((X_j)_{j=1}^n\) from \(p\), and compute the <b>sample mean:</b>
+</p>
+
+\begin{equation}
+\label{org4c9e3f1}
+    S \overset{\mathbb{E}}{\approx} \hat{S}_\frac{1}{n} := \frac{1}{n} \sum_{j=1}^n{f(X_j)}
+\end{equation}
+
+<p>
+It's interesting to revisit the sample mean as a special case of our more general framework.
+Our i.i.d. sampling procedure can be viewed as a point process; its expectation measure is \(\nu = n p\), with density function \(n p(x)\).
+The Radon-Nikodym derivative is:
+</p>
+
+\begin{align*}
+    \frac{dp}{d\nu}(x) = \frac{dp/dx}{n dp/dx} = \frac{p(x)}{n p(x)} = \frac{1}{n}
+\end{align*}
+
+<p>
+so that the sample mean estimator (equation \eqref{org4c9e3f1}) follows directly as a special case of the sample-reweighting estimator (equation \eqref{org77807e8}):
+</p>
+
+\begin{equation}
+    \hat{S}_X := \sum_j{\frac{1}{n} f(X_j)} = \frac{1}{n} \sum_{j=1}^n{f(X_j)} = \hat{S}_\frac{1}{n}
+\end{equation}
+
+<p>
+Some sampling procedures like Markov Chain Monte Carlo (MCMC) do not draw independent samples (the chains have <i>autocorrelation</i>).
+However, once ergodicity is achieved, a chain of length \(n\) does have \(n p\) as its expectation measure, so that equation \eqref{org4c9e3f1} still applies (with somewhat degraded variance).
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:importance-sampling-general" class="outline-3">
+<h3 id="sec:importance-sampling-general"><span class="section-number-3">9.2.</span> Importance Sampling and Likelihood Ratio Estimator</h3>
+<div class="outline-text-3" id="text-sec:importance-sampling-general">
+<p>
+Now assume that the sample \((X_j)_{j=1}^n\) was drawn from some <i>other</i> probability distribution \(p'\), with density function \(p'(x)\).
+Then applying equation \eqref{org77807e8} gives us what has been called in the literature the <b>likelihood ratio estimator:</b>
+</p>
+
+\begin{equation}
+\label{org4d0939e}
+    S \overset{\mathbb{E}}{\approx} \hat{S}_\frac{p}{n p'} := \frac{1}{n} \sum_{j=1}^n{\frac{p(x)}{p'(x)} f(X_j)}
+\end{equation}
+
+<p>
+The above is how Importance Sampling is generally framed in the literature.
+Equation \eqref{org4d0939e} also works in the discrete case, i.e. when \(p(x)\) and \(p'(x)\) are probability <i>mass</i> functions instead of probability density functions.
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec:beyond-point-samples" class="outline-2">
+<h2 id="sec:beyond-point-samples"><span class="section-number-2">10.</span> Beyond point samples</h2>
+<div class="outline-text-2" id="text-sec:beyond-point-samples">
+</div>
+
+
+<div id="outline-container-sec:random-integrals" class="outline-3">
+<h3 id="sec:random-integrals"><span class="section-number-3">10.1.</span> Random integrals</h3>
+<div class="outline-text-3" id="text-sec:random-integrals">
+<p>
+Recall that the proof of equation \eqref{org77807e8} involved the expectation of an integral over the sample viewed as a random measure \(\hat{n}_X\):
+</p>
+
+\begin{equation}
+\label{org3cb0833}
+    S \overset{\mathbb{E}}{\approx} \int_{x \in \mathcal{X}}{\frac{d\mu}{d\nu}(x) f(x) d\hat{n}_X(x)}
+\end{equation}
+
+<p>
+We will now simply forget that \(\hat{n}_X\) represents a point sample, thus making equation \eqref{org3cb0833} more broadly applicable.
+This is interesting because sometimes, we have more efficient ways of computing integrals than by drawing a point sample.
+</p>
+</div>
+</div>
+
+<div id="outline-container-sec:example-firebrands" class="outline-3">
+<h3 id="sec:example-firebrands"><span class="section-number-3">10.2.</span> Example: damage from firebrands in wildfire simulations</h3>
+<div class="outline-text-3" id="text-sec:example-firebrands">
+<p>
+In the United States, most of the damage caused by wildfires to structures is due to firebrands - burning embers that get carried by the wind and ignite buildings.
+The risk caused by firebrands can be estimated by running Monte Carlo simulations that model hypothetical fires and their firebrands emissions.
+</p>
+
+<p>
+The most basic way in which this is done it to simulate a large number of fires \((F_j)_j\), and for each fire to simulate the trajectories and structure ignitions of firebrands emitted by burning fuels, recording which structures end up ignited.
+Effectively, we're estimating structure ignition probability by drawing a point process \((B_j(s))_j\) of structure ignitions, \(B_j(s)\) being a Bernoulli random variable corresponding to \(j\) burning \(s\),
+and the probability<sup><a id="fnr.2" class="footref" href="#fn.2" role="doc-backlink">2</a></sup> \(\beta(s)\) of structure \(s\) burning across all potential fires is estimated as:
+</p>
+
+\begin{equation}
+    \beta(s) = \int_{F}{\mathbb{P}\left[s \text{ burns} | F\right] d\mu(F)} \overset{\mathbb{E}}{\approx} \hat{\beta}(s) := \sum_j{\frac{d\mu}{d\nu}(F_j) B_j(s)}
+\end{equation}
+
+<p>
+in which \(\mu\) and \(\nu\) are respectively the expectation measures of real-world and simulated fire occurrence (which are known by design of the simulations).
+</p>
+
+<p>
+This estimation could be done more efficiently, however. Oftentimes, the stochastic model for firebrand trajectories is simple enough to be analytically tractable:
+typically, each burning pixel emits a random number of firebrands based on its burning conditions, then each firebrand "jumps" independently,
+with a log-normal jump in the wind direction and a normal jump orthogonal to it, so that we can compute the spatial probability density of the jump.
+Then we might apply a probability of successful structure ignition based on things like travelled distance and structure characteristics.
+The upshot is: for each structure \(s\) and each burned pixel \(z\), we know how to compute the expected number \(\phi_j(s;z)\) of firebrands originating from \(z\) that burn \(s\) conditional on fire \(j\).
+</p>
+
+<p>
+Then the total expected number \(\phi_j(s)\) of firebrands igniting structure \(s\) during fire \(j\) is simply the sum over burned pixels:
+</p>
+
+\begin{equation}
+    \phi_j(s) = \sum_{z}{\phi_j(s;z)}
+\end{equation}
+
+<p>
+It's sensible to assume that the number of firebrands actually burning \(s\) is Poisson-distributed, and therefore the probability that the structure burns during fire \(j\) is \(\beta_j(s) = \left(1 - e^{- \phi_j(s)}\right)\).
+Then the aggregated risk estimate becomes:
+</p>
+
+\begin{equation}
+    \beta(s) \overset{\mathbb{E}}{\approx} \sum_j{\frac{d\mu}{d\nu}(F_j) \beta_j(s)}
+\end{equation}
+
+<p>
+Of course, all of the techniques that we have seen in previous sections are applicable to sampling the simulated fires.
+For example, we might use Importance Sampling to oversample the fires that are most likely to emit firebrands, 
+for example because they happen in firebrand-prone vegetation like eucalyptus.
+</p>
+</div>
+</div>
+</div>
+
+
+<div id="outline-container-sec:summary" class="outline-2">
+<h2 id="sec:summary"><span class="section-number-2">11.</span> Summary</h2>
+<div class="outline-text-2" id="text-sec:summary">
+<p>
+Let's recap the ground we have covered.
+We have seen how to estimate discrete sums (section <a href="#sec:goal-discrete-sum">2</a>), continuous integrals (section <a href="#sec:estimating-continuous-integrals">8</a>), probabilistic expectations (section <a href="#sec:estimating-probabilistic-expectations">9</a>) and general integrals (<a href="#sec:general-integration">7</a>)
+using random samples. To address issues of computational efficiency, we have studied more or less sophisticated sampling schemes,
+from uniform i.i.d. sampling (section <a href="#sec:iid-uniform-sample">3</a>) to weighted designs like Bernoulli sampling Importance Sampling (section <a href="#sec:weighted-samples">5</a>),
+and even more irregular use cases like merging samples (section <a href="#sec:example-merging-samples">6.1</a>) and multi-stage designs (section <a href="#sec:example-tiled-geospatial">6.2</a>).
+We used Measure Theory to give a unified treatment of all these use cases (<a href="#sec:estimating-general-integrals">7.3</a>), thus deriving a <b>general estimation formula:</b>
+</p>
+
+\begin{equation}
+\label{org9e0ef4d}
+    S := \int_{x \in \mathcal{X}}{f(x)d\mu(x)} \overset{\mathbb{E}}{\approx} \sum_j{\frac{d\mu}{d\nu}(X_j) f(X_j)} =: \hat{S}
+\end{equation}
+
+<p>
+Table <a href="#org1d4269c">3</a> references the concrete embodiments of equation \eqref{org9e0ef4d} that we have covered:
+</p>
+
+<table id="org1d4269c" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 3:</span> List of estimation techniques.</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Estimand \(S\)</th>
+<th scope="col" class="org-left">Target measure \(\mu\)</th>
+<th scope="col" class="org-left">Sampling scheme</th>
+<th scope="col" class="org-left">\(\frac{d\mu}{d\nu}(x)\)</th>
+<th scope="col" class="org-left">Equation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">Discrete sum \(\sum_x{f(x)}\)</td>
+<td class="org-left">\(\mu := \kappa = \sum_{x}{\delta_x}\)</td>
+<td class="org-left">Uniform sampling (with or without replacement, sample size \(n\))</td>
+<td class="org-left">\(\frac{1}{n / \lvert \mathcal{X} \rvert} = \frac{\lvert \mathcal{X} \rvert}{n}\)</td>
+<td class="org-left">\eqref{org31d1d44}</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">Importance sampling (sample size \(n\), proposal distr \(p'_\text{MF}(x)\))</td>
+<td class="org-left">\(\frac{1}{n p'_\text{MF}(x)}\)</td>
+<td class="org-left">\eqref{org5661861}</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">Bernoulli sampling (selection prob \(q(x)\))</td>
+<td class="org-left">\(\frac{1}{q(x)}\)</td>
+<td class="org-left">\eqref{orgffa4bf4}</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">Poisson sampling (selection frequency \(q(x)\))</td>
+<td class="org-left">\(\frac{1}{q(x)}\)</td>
+<td class="org-left">\eqref{orgffa4bf4}</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">General case (expected frequency mass function \(\nu(x)\))</td>
+<td class="org-left">\(\frac{1}{\nu(x)}\)</td>
+<td class="org-left">\eqref{org0e22f27}</td>
+</tr>
+
+<tr>
+<td class="org-left">Continuous integral \(\int_{\mathcal{X}}{f(x)dx}\)</td>
+<td class="org-left">\(d\mu := dx\)</td>
+<td class="org-left">Importance sampling (sample size \(n\), proposal distr \(p'_\text{DF}(x)\))</td>
+<td class="org-left">\(\frac{1}{n p'_\text{DF}(x)}\)</td>
+<td class="org-left">\eqref{org9344aeb}</td>
+</tr>
+
+<tr>
+<td class="org-left">Expectation \(\mathbb{E}[f(X)]\), \(X \sim p(x)\)</td>
+<td class="org-left">\(\mu := p\)</td>
+<td class="org-left">Monte-Carlo + sample mean (sample size \(n\))</td>
+<td class="org-left">\(\frac{p(x)}{n p(x)} = \frac{1}{n}\)</td>
+<td class="org-left">\eqref{org4c9e3f1}</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">Importance sampling (sample size \(n\), proposal distr \(p'(x)\))</td>
+<td class="org-left">\(\frac{p(x)}{n p'(x)}\)</td>
+<td class="org-left">\eqref{org4d0939e}</td>
+</tr>
+</tbody>
+</table>
+
+<p>
+Table <a href="#org0ba59c5">4</a> summarizes the cast of characters:
+</p>
+
+<table id="org0ba59c5" border="2" cellspacing="0" cellpadding="6" rules="groups" frame="hsides">
+<caption class="t-above"><span class="table-number">Table 4:</span> Table of symbols</caption>
+
+<colgroup>
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+
+<col  class="org-left" />
+</colgroup>
+<thead>
+<tr>
+<th scope="col" class="org-left">Symbol(s)</th>
+<th scope="col" class="org-left">Meaning</th>
+<th scope="col" class="org-left">&#xa0;</th>
+<th scope="col" class="org-left">Main formulas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td class="org-left">\(S\)</td>
+<td class="org-left">Estimand: the sum to be estimated.</td>
+<td class="org-left">\eqref{org2fba7dc}</td>
+<td class="org-left">\(S := \sum_x{f(x)}\) <i>(discrete case)</i></td>
+</tr>
+
+<tr>
+<td class="org-left">\(\mathcal{X}\)</td>
+<td class="org-left">Set indexing the terms of \(S\) (from which samples are drawn).</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+</tr>
+
+<tr>
+<td class="org-left">\((X_j)_j\)</td>
+<td class="org-left">Random sample drawn from \(\mathcal{X}\).</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">\(X_j \in \mathcal{X}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">\(n\)</td>
+<td class="org-left">(Expected) size of the sample. (The size itself may be random.)</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+</tr>
+
+<tr>
+<td class="org-left">\(\hat{n}_X\)</td>
+<td class="org-left"><i>Random measure</i> representing \((X_j)_j\).</td>
+<td class="org-left">\eqref{org2a2a3fd}</td>
+<td class="org-left">\(\hat{n}_X := \sum_j{\delta_{X_j}}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">\eqref{org2a2a3fd}</td>
+<td class="org-left">\(\hat{n}_X(A) = \sum_{j \lvert X_j \in A}{1}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">\eqref{org83b36a9}</td>
+<td class="org-left">\(\int_{x \in \mathcal{X}}{g(x)d\hat{n}_X(x)} = \sum_j{g(X_j)}\)</td>
+</tr>
+
+<tr>
+<td class="org-left">\(\nu\)</td>
+<td class="org-left"><i>Expectation measure</i> of the sampling procedure.</td>
+<td class="org-left">\eqref{org2da55f9}</td>
+<td class="org-left">\(\nu := \mathbb{E}\left[ \hat{n}_X \right]\)</td>
+</tr>
+
+<tr>
+<td class="org-left">\(\mu\)</td>
+<td class="org-left">Estimand measure - from the definition of \(S\).</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+</tr>
+
+<tr>
+<td class="org-left">\(\hat{S}\)</td>
+<td class="org-left">Estimator of \(S\).</td>
+<td class="org-left">\eqref{org0e22f27}</td>
+<td class="org-left">\(\hat{S} := \sum_j{\frac{1}{\nu(X_j)}f(X_j)}\) <i>(discrete case)</i></td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">\eqref{org77807e8}</td>
+<td class="org-left">\(\hat{S} := \sum_j{\frac{d\mu}{d\nu}(X_j) f(X_j)}\) <i>(general case)</i></td>
+</tr>
+
+<tr>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">\(\hat{S} \overset{\mathbb{E}}{\approx} S\)</td>
+</tr>
+
+<tr>
+<td class="org-left">\(\frac{d\mu}{d\nu}(x)\)</td>
+<td class="org-left">Concentration ratio of estimand over expectation measure at point \(x \in \mathcal{X}\) (Radon-Nikodym derivative).</td>
+<td class="org-left">&#xa0;</td>
+<td class="org-left">&#xa0;</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+
+
+<div id="outline-container-org68cf049" class="outline-2">
+<h2 id="org68cf049"><span class="section-number-2">12.</span> Parting thoughts</h2>
+<div class="outline-text-2" id="text-12">
+<p>
+I suspect that a lot of resources are wasted on computing sums exhaustively,
+for lack of thinking to use a random sub-sample, even with a basic sampling procedure like Bernoulli sampling (see sections <a href="#sec:iid-uniform-sample">3</a> and <a href="#sec:other-uniform-samples">4</a>).
+If this general approach is a new tool in your toolbox, my main goal for this article is achieved.
+</p>
+
+<p>
+In my current work (environmental data science and stochastic modeling of natural hazards), uniform subsamples often fall short of being precise enough.
+In such cases, weighted sampling schemes (see section <a href="#sec:weighted-samples">5</a>) like stratification and Importance Sampling can help significantly.
+I have found that the most basic weighted sampling procedures are often too simplistic to be practical:
+this is when the more general "sample-reweighting" estimators (equations \eqref{org0e22f27} and \eqref{org77807e8}) come in handy, as they provide a unified treatment of <i>all</i> sampling procedures.
+Reweighting samples is useful not only for estimating one sum more efficiently, but also for repurposing a sample to target other distributions.
+</p>
+
+<p>
+I used to think of sub-sampling solely in terms of random points.
+I have found the <i>point process</i> and <i>random measure</i> perspectives to be empowering.
+I initially thought that it wasn't worth the abstraction effort in practice; I'm glad I reconsidered.
+These notions are useful not only for approximating sums, but for <i>conceiving</i> of sums.
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:further-reading" class="outline-2">
+<h2 id="sec:further-reading"><span class="section-number-2">13.</span> Further reading</h2>
+<div class="outline-text-2" id="text-sec:further-reading">
+<p>
+A good textbook on Monte Carlo methods is (Rubinstein, Reuven Y and Kroese, Dirk P, 2016). 
+</p>
+
+<p>
+I haven't seen exactly the angle of this article being used in the statistical literature, which is why I felt the need to write it.
+Still, I would welcome references from commenters.
+There is much more to using sub-samples: for example, this tutorial hasn't covered the use of cheaper auxiliary functions for improving the approximation - see e.g. (McConville, Kelly S and Moisen, Gretchen G and Frescino, Tracey S, 2020).
+I'm no specialist, but I suspect the survey design literature is a good logical next step: I hear (Kalton, Graham, 2020) is a good reference.
+</p>
+
+<p>
+A more rigorous treatment of random measures may be found in (Kallenberg, Olav and others, 2017).
+For mathematical introductions to Measure Theory, see (Tao, Terence, 2011) and (Halmos, Paul R, 2013).
+</p>
+</div>
+</div>
+
+
+<div id="outline-container-sec:references" class="outline-2">
+<h2 id="sec:references"><span class="section-number-2">14.</span> References</h2>
+<div class="outline-text-2" id="text-sec:references">
+<p>
+Halmos, Paul R (2013). <i>Measure theory</i>, Springer.</p>
+
+<p>
+Kallenberg, Olav and others (2017). <i>Random measures, theory and applications</i>, Springer.</p>
+
+<p>
+Kalton, Graham (2020). <i>Introduction to survey sampling</i>, Sage Publications.</p>
+
+<p>
+McConville, Kelly S and Moisen, Gretchen G and Frescino, Tracey S (2020). <i>A tutorial on model-assisted estimation with application to forest inventory</i>, MDPI.</p>
+
+<p>
+Rubinstein, Reuven Y and Kroese, Dirk P (2016). <i>Simulation and the Monte Carlo method</i>, John Wiley \&amp; Sons.</p>
+
+<p>
+Tao, Terence (2011). <i>An introduction to measure theory</i>, American Mathematical Soc..</p>
+</div>
+</div>
+<div id="footnotes">
+<h2 class="footnotes">Footnotes: </h2>
+<div id="text-footnotes">
+
+<div class="footdef"><sup><a id="fn.1" class="footnum" href="#fnr.1" role="doc-backlink">1</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">"<i>Measure in everything, neither too much nor too little!</i>" The commanding officer of the 2011 Polytechnique class probably did not have Measure Theory in mind when he was telling us this, but I expect my applying his mantra to approximate sums will leave us in good terms. Puns intended.</p></div></div>
+
+<div class="footdef"><sup><a id="fn.2" class="footnum" href="#fnr.2" role="doc-backlink">2</a></sup> <div class="footpara" role="doc-footnote"><p class="footpara">Rigorously speaking, this is the expected burn count of the structure. It is a reasonable approximation as long as the probability of "collision" between several potential fires is negligible.</p></div></div>
+
+
+</div>
+</div></div>
+<div id="postamble" class="status">
+<p class="author">Author: Valentin Waeselynck</p>
+<p class="date">Created: 2024-02-15 Thu 09:02</p>
+<p class="validation"><a href="https://validator.w3.org/check?uri=referer">Validate</a></p>
+</div>
+</body>
+</html>

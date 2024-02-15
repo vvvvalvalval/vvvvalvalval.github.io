@@ -12,11 +12,28 @@ http://vvvvalvalval.github.io/
 
 </description>
 <lastBuildDate>
-Fri, 14 Jan 2022 12:25:41 +0100
+Thu, 15 Feb 2024 09:21:17 +0100
 </lastBuildDate>
 <generator>
 clj-rss
 </generator>
+<item>
+<guid>
+http://vvvvalvalval.github.io/posts/random-tricks-for-computing-costly-sums.html
+</guid>
+<link>
+http://vvvvalvalval.github.io/posts/random-tricks-for-computing-costly-sums.html
+</link>
+<title>
+Random tricks for computing costly sums
+</title>
+<description>
+
+</description>
+<pubDate>
+Thu, 15 Feb 2024 00:00:00 +0100
+</pubDate>
+</item>
 <item>
 <guid>
 http://vvvvalvalval.github.io/posts/some-re-frame-patterns-for-composability.html
